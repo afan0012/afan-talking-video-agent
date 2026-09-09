@@ -29,7 +29,7 @@ PYINSTALLER_EXCLUDES = (
     "torch", "torchvision", "torchaudio",
     "faster_whisper", "ctranslate2", "transformers", "tokenizers",
     "onnxruntime", "cv2", "pyarrow", "scipy", "pandas",
-    "sklearn", "botocore", "boto3", "av",
+    "sklearn", "botocore", "boto3", "av", "tkinter",
 )
 
 
@@ -77,6 +77,27 @@ def main() -> None:
         command.extend(["--add-binary", f"{args.ffmpeg};bin"])
         command.extend(["--add-binary", f"{ffprobe};bin"])
         command.extend(["--add-data", f"{args.ffmpeg_license};licenses"])
+    # Conda-style interpreters keep their support DLLs in
+    # `<prefix>\Library\bin`, which PyInstaller's dependency walk misses:
+    # a frozen `_ssl`/`_hashlib`/`_bz2`/`_ctypes`/numpy then fails with
+    # "DLL load failed".  Bundle the known set explicitly.
+    library_bin = Path(sys.base_prefix) / "Library" / "bin"
+    for name in ("libcrypto-3-x64.dll", "libssl-3-x64.dll",
+                 "libcrypto-3.dll", "libssl-3.dll",
+                 "libcrypto-1_1-x64.dll", "libssl-1_1-x64.dll",
+                 "libbz2.dll", "ffi.dll", "liblzma.dll", "libexpat.dll"):
+        candidate = library_bin / name
+        if candidate.is_file():
+            command.extend(["--add-binary", f"{candidate};."])
+    if library_bin.is_dir():
+        for candidate in sorted(library_bin.glob("libopenblas*.dll")):
+            command.extend(["--add-binary", f"{candidate};."])
+    # numpy wheels ship their OpenBLAS in `numpy.libs`; hooks can miss it.
+    for pattern_dir in (Path(sys.base_prefix) / "Lib" / "site-packages" / "numpy.libs",
+                        Path(sys.base_prefix) / "Lib" / "site-packages" / "numpy" / ".libs"):
+        if pattern_dir.is_dir():
+            for candidate in sorted(pattern_dir.glob("libopenblas*.dll")):
+                command.extend(["--add-binary", f"{candidate};."])
     subprocess.run(command, cwd=ROOT, check=True)
 
     app_dir = DIST / APP_EXE_NAME
