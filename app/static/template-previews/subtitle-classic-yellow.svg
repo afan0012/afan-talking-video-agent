@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 720">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e8c793"/><stop offset="1" stop-color="#a8764e"/></linearGradient></defs>
+  <rect width="480" height="720" fill="url(#bg)"/>
+  <circle cx="238" cy="315" r="94" fill="#f1c4a6"/>
+  <path d="M137 311c-18-115 155-169 205-42-52-34-105-26-205 42z" fill="#302226"/>
+  <path d="M105 720c15-171 65-224 137-224 70 0 117 82 132 224z" fill="#e6d7c4"/>
+  <text x="240" y="88" text-anchor="middle" font-family="Microsoft YaHei,sans-serif" font-size="32" font-weight="900" fill="#9d1717" stroke="#fff" stroke-width="2">别让焦虑打乱节奏</text>
+  <text x="240" y="128" text-anchor="middle" font-family="Microsoft YaHei,sans-serif" font-size="30" font-weight="900" fill="#fff" stroke="#5c2c20" stroke-width="2">慢慢变好就是答案</text>
+  <text x="240" y="600" text-anchor="middle" font-family="Microsoft YaHei,sans-serif" font-size="25" font-weight="800" fill="#fff" stroke="#4b2d24" stroke-width="5" paint-order="stroke">别让焦虑打乱你的节奏</text>
+  <text x="240" y="639" text-anchor="middle" font-family="Microsoft YaHei,sans-serif" font-size="25" font-weight="800" fill="#ffe047" stroke="#4b2d24" stroke-width="5" paint-order="stroke">慢慢变好就是答案</text>
+</svg>

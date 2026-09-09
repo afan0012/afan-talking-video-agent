@@ -1,0 +1,37 @@
+{
+  "name": "afan-talking-head-agent",
+  "version": "0.2.0",
+  "description": "口播智能体桌面版",
+  "main": "electron/main.cjs",
+  "private": true,
+  "scripts": {
+    "electron": "electron .",
+    "electron:dev": "electron .",
+    "package:dir": "electron-builder --dir",
+    "package:win": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.afan.talkingheadagent",
+    "productName": "口播智能体",
+    "artifactName": "口播智能体-${version}-Setup.${ext}",
+    "directories": { "output": "dist-electron" },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "dist-windows/口播智能体", "to": "backend" }
+    ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "口播智能体"
+    }
+  }
+}

@@ -1,0 +1,4 @@
+# Optional local ASR dependency. Install a matching PyTorch/torchaudio build
+# for the machine first, then install this file. It is intentionally separate
+# from requirements.txt so the default install stays small.
+funasr
