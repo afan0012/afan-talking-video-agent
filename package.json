@@ -1,5 +1,5 @@
 {
-  "name": "afan-talking-head-agent",
+  "name": "afan-talking-video-agent",
   "version": "0.2.0",
   "description": "口播智能体桌面版",
   "main": "electron/main.cjs",
@@ -15,23 +15,23 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "com.afan.talkingheadagent",
-    "productName": "口播智能体",
-    "artifactName": "口播智能体-${version}-Setup.${ext}",
+    "appId": "com.afan.talkingvideoagent",
+    "productName": "afan Talking Video Agent",
+    "artifactName": "afan-Talking-Video-Agent-${version}-Setup.${ext}",
     "directories": { "output": "dist-electron" },
     "files": [
       "electron/**/*",
       "package.json"
     ],
     "extraResources": [
-      { "from": "dist-windows/口播智能体", "to": "backend" }
+      { "from": "dist-windows/afan Talking Video Agent", "to": "backend" }
     ],
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "口播智能体"
+      "shortcutName": "afan Talking Video Agent"
     }
   }
 }

@@ -1,4 +1,4 @@
-"""管理可选的本地 HeyGem Lite 引擎包（Docker 版）。
+﻿"""管理可选的本地 HeyGem Lite 引擎包（Docker 版）。
 
 与 MuseTalk/Qwen3-TTS 的本地运行时不同，HeyGem Lite 官方以 Docker 镜像
 分发：模型包内是一个 ``docker-compose-lite.yml`` 和一个
@@ -469,7 +469,7 @@ def preflight(*, data_root: Path | None = None, force: bool = False) -> dict[str
 
 def _download_installer(destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
-    request = urllib.request.Request(DOCKER_INSTALLER_URL, headers={"User-Agent": "afan-talking-head-agent/0.2"})
+    request = urllib.request.Request(DOCKER_INSTALLER_URL, headers={"User-Agent": "afan-talking-video-agent/0.2"})
     last_report = 0.0
     with urllib.request.urlopen(request, timeout=120) as response, destination.open("wb") as output:
         total = int(response.headers.get("Content-Length") or 0)

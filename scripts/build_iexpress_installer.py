@@ -14,9 +14,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-APP_DIR = ROOT / "dist-windows" / "afan Talking Head Agent"
+APP_DIR = ROOT / "dist-windows" / "afan Talking Video Agent"
 OUTPUT_DIR = ROOT / "dist-windows" / "installer"
-SETUP_EXE = OUTPUT_DIR / "afan-Talking-Head-Agent-Setup.exe"
+SETUP_EXE = OUTPUT_DIR / "afan-Talking-Video-Agent-Setup.exe"
 
 
 def _zip_payload(path: Path) -> None:
@@ -27,27 +27,27 @@ def _zip_payload(path: Path) -> None:
 
 
 def main() -> None:
-    if not (APP_DIR / "afan Talking Head Agent.exe").is_file():
+    if not (APP_DIR / "afan Talking Video Agent.exe").is_file():
         raise SystemExit("请先运行 scripts/build_windows.py 生成独立程序文件夹。")
     iexpress = Path(r"C:\Windows\System32\iexpress.exe")
     if not iexpress.is_file():
         raise SystemExit("当前 Windows 未提供 IExpress，无法生成测试安装包。")
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="koubo-installer-", dir=ROOT / "dist-windows") as temp:
+    with tempfile.TemporaryDirectory(prefix="afan-installer-", dir=ROOT / "dist-windows") as temp:
         stage = Path(temp)
         payload = stage / "payload.zip"
         _zip_payload(payload)
         (stage / "install.cmd").write_text(
             "@echo off\r\n"
             "setlocal\r\n"
-            "set \"TARGET=%LOCALAPPDATA%\\Programs\\afan Talking Head Agent\"\r\n"
+            "set \"TARGET=%LOCALAPPDATA%\\Programs\\afan Talking Video Agent\"\r\n"
             "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='Stop'; "
             "$target=[Environment]::ExpandEnvironmentVariables('%TARGET%'); "
             "New-Item -ItemType Directory -Force -Path $target | Out-Null; "
             "Expand-Archive -LiteralPath '%~dp0payload.zip' -DestinationPath (Split-Path $target) -Force\"\r\n"
             "if errorlevel 1 exit /b 1\r\n"
-            "start \"\" \"%TARGET%\\afan Talking Head Agent.exe\"\r\n"
+            "start \"\" \"%TARGET%\\afan Talking Video Agent.exe\"\r\n"
             "exit /b 0\r\n",
             encoding="mbcs",
             newline="",
@@ -68,7 +68,7 @@ def main() -> None:
             "SourceFiles=SourceFiles\r\n"
             "FILE0=\"payload.zip\"\r\nFILE1=\"install.cmd\"\r\n"
             "[Strings]\r\nInstallPrompt=\r\nDisplayLicense=\r\nFinishMessage=\r\n"
-            "TargetName=" + target + "\r\nFriendlyName=afan Talking Head Agent Setup\r\n"
+            "TargetName=" + target + "\r\nFriendlyName=afan Talking Video Agent Setup\r\n"
             "AppLaunched=cmd /c install.cmd\r\nPostInstallCmd=<None>\r\nAdminQuietInstCmd=\r\nUserQuietInstCmd=\r\n"
             "[SourceFiles]\r\nSourceFiles0=" + source + "\\\r\n"
             "[SourceFiles0]\r\n%FILE0%=\r\n%FILE1%=\r\n",

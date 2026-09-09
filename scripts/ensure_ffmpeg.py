@@ -1,4 +1,4 @@
-"""确保 FFmpeg/ffprobe 可用：缺失时自动下载到数据目录 tools\ffmpeg\bin。
+﻿"""确保 FFmpeg/ffprobe 可用：缺失时自动下载到数据目录 tools\ffmpeg\bin。
 
 设计目标（开箱即用）：
 - 不要求管理员权限、不改系统 PATH、可放任意数据盘；
@@ -50,7 +50,7 @@ def _data_root() -> Path:
 
 
 def _download(url: str, destination: Path, label: str) -> None:
-    request = urllib.request.Request(url, headers={"User-Agent": "afan-talking-head-agent/0.2"})
+    request = urllib.request.Request(url, headers={"User-Agent": "afan-talking-video-agent/0.2"})
     with urllib.request.urlopen(request, timeout=120) as response, destination.open("wb") as output:
         total = int(response.headers.get("Content-Length") or 0)
         received = 0

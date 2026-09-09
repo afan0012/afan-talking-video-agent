@@ -5,7 +5,7 @@
     python scripts/package.py
 
 输出：
-    dist-release/afan-Talking-Head-Agent.zip   -- source, docs and config template only,
+    dist-release/afan-Talking-Video-Agent.zip   -- source, docs and config template only,
     不含个人素材（work/）、项目数据（data/jobs）、日志和 .env。
 """
 from __future__ import annotations
@@ -18,8 +18,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist-release"
-STAGE = DIST / "afan Talking Head Agent"
-ZIP_PATH = DIST / "afan-Talking-Head-Agent.zip"
+STAGE = DIST / "afan Talking Video Agent"
+ZIP_PATH = DIST / "afan-Talking-Video-Agent.zip"
 
 # 除了 git 跟踪文件外，还要打进发布包的新文件
 EXTRA_FILES = [
@@ -30,7 +30,7 @@ EXTRA_FILES = [
 
 # 从 git 跟踪列表里剔除、不进发布包的文件（内部文档/开发脚本）
 EXCLUDE_FILES = {
-    "afan-talking-head-agent-product-notes.md",  # internal product notes
+    "afan-talking-video-agent-product-notes.md",  # internal product notes
     "work/sample.jpg",
 }
 

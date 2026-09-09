@@ -1,4 +1,4 @@
-"""管理可选的本地 MuseTalk 引擎包。
+﻿"""管理可选的本地 MuseTalk 引擎包。
 
 主程序本身不捆绑 GPU 模型和 PyTorch。这个模块只负责把一个经过发布者
 准备的引擎压缩包下载/解压到用户指定目录，并检查关键文件是否齐全。
@@ -167,7 +167,7 @@ def _download(url: str, destination: Path, expected_sha256: str | None = None) -
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ValueError("引擎下载地址必须是 http(s) URL")
-    request = urllib.request.Request(url, headers={"User-Agent": "afan-talking-head-agent/0.2"})
+    request = urllib.request.Request(url, headers={"User-Agent": "afan-talking-video-agent/0.2"})
     with urllib.request.urlopen(request, timeout=60) as response, destination.open("wb") as output:
         total = int(response.headers.get("Content-Length") or 0)
         received = 0

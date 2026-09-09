@@ -1,4 +1,4 @@
-"""One-click MuseTalk model/source installer.
+﻿"""One-click MuseTalk model/source installer.
 
 The normal UI deliberately does not accept arbitrary model URLs.  This module
 uses a small, versioned manifest that points at the upstream MuseTalk source
@@ -94,7 +94,7 @@ def _download(urls: list[str], destination: Path, report: Callable[[int, int | N
     for url in urls:
         try:
             existing = part.stat().st_size if part.exists() else 0
-            headers = {"User-Agent": "afan-talking-head-agent/0.2"}
+            headers = {"User-Agent": "afan-talking-video-agent/0.2"}
             if existing:
                 headers["Range"] = f"bytes={existing}-"
             request = urllib.request.Request(url, headers=headers)

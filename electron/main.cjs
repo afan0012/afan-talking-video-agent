@@ -21,11 +21,11 @@ function findFreePort() {
 function backendCommand() {
   if (app.isPackaged) {
     return {
-      command: path.join(process.resourcesPath, 'backend', '口播智能体.exe'),
+      command: path.join(process.resourcesPath, 'backend', 'afan Talking Video Agent.exe'),
       args: [],
     };
   }
-  const python = process.env.KOUBO_PYTHON || 'python';
+  const python = process.env.AFAN_PYTHON || 'python';
   return {
     command: python,
     args: [path.join(__dirname, '..', 'desktop_launcher.py')],
@@ -53,12 +53,12 @@ async function startBackend() {
   const { command, args } = backendCommand();
   backend = spawn(command, args, {
     cwd: path.join(__dirname, '..'),
-    env: { ...process.env, KOUBO_PORT: String(backendPort), KOUBO_NO_BROWSER: '1' },
+    env: { ...process.env, AFAN_PORT: String(backendPort), AFAN_NO_BROWSER: '1' },
     windowsHide: true,
     stdio: 'ignore',
   });
   backend.once('error', (error) => {
-    if (windowRef) dialog.showErrorBox('口播智能体启动失败', error.message);
+    if (windowRef) dialog.showErrorBox('afan Talking Video Agent启动失败', error.message);
   });
   await waitForServer(`http://127.0.0.1:${backendPort}/`);
 }
@@ -79,7 +79,7 @@ function createWindow() {
     height: 960,
     minWidth: 1080,
     minHeight: 720,
-    title: '口播智能体',
+    title: 'afan Talking Video Agent',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -99,7 +99,7 @@ app.whenReady().then(async () => {
     await startBackend();
     createWindow();
   } catch (error) {
-    dialog.showErrorBox('口播智能体启动失败', error.message);
+    dialog.showErrorBox('afan Talking Video Agent启动失败', error.message);
     app.quit();
   }
 });

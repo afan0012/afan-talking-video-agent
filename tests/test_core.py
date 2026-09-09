@@ -749,10 +749,10 @@ def test_project_intermediate_downloads_are_allowlisted(tmp_path, monkeypatch):
 
     assert audio.status_code == 200
     assert audio.content == b"RIFF-preview"
-    assert "talkforge-download-test-voice-preview.wav" in audio.headers["content-disposition"]
+    assert "talking-video-download-test-voice-preview.wav" in audio.headers["content-disposition"]
     assert video.status_code == 200
     assert video.content == b"video-result"
-    assert "talkforge-download-test-lipsync.mp4" in video.headers["content-disposition"]
+    assert "talking-video-download-test-lipsync.mp4" in video.headers["content-disposition"]
     assert blocked.status_code == 404
 
 

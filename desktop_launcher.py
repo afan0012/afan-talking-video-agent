@@ -1,4 +1,4 @@
-"""Windows desktop entry point used by the packaged application.
+﻿"""Windows desktop entry point used by the packaged application.
 
 The product remains a local web application, but a normal user starts it by
 double-clicking one executable instead of running Python or a batch file.
@@ -20,7 +20,7 @@ import uvicorn
 def _log(message: str) -> None:
     """Keep a tiny first-start log for packaged-app diagnostics."""
     try:
-        base = Path(__import__("os").environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "afan Talking Head Agent"
+        base = Path(__import__("os").environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "afan Talking Video Agent"
         base.mkdir(parents=True, exist_ok=True)
         with (base / "launcher.log").open("a", encoding="utf-8") as output:
             output.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {message}\n")
@@ -29,7 +29,7 @@ def _log(message: str) -> None:
 
 
 def _available_port() -> int:
-    requested = os.environ.get("KOUBO_PORT", "").strip()
+    requested = os.environ.get("AFAN_PORT", "").strip()
     if requested.isdigit():
         port = int(requested)
         if 1 <= port <= 65535:
@@ -48,7 +48,7 @@ def _available_port() -> int:
 
 
 def _open_when_ready(url: str) -> None:
-    if os.environ.get("KOUBO_NO_BROWSER", "").lower() in {"1", "true", "yes"}:
+    if os.environ.get("AFAN_NO_BROWSER", "").lower() in {"1", "true", "yes"}:
         return
     for _ in range(100):
         try:

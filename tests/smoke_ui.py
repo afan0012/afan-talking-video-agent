@@ -1,4 +1,4 @@
-import os
+﻿import os
 from urllib.parse import urlencode
 
 from playwright.sync_api import sync_playwright
@@ -13,7 +13,7 @@ with sync_playwright() as playwright:
     errors = []
     page.on("console", lambda message: errors.append(message.text) if message.type == "error" else None)
     page.goto(APP_URL, wait_until="networkidle")
-    assert page.get_by_text("afan Talking Head Agent", exact=True).is_visible()
+    assert page.get_by_text("afan Talking Video Agent", exact=True).is_visible()
     assert page.get_by_role("tab", name="直接文案创作").is_visible()
     page.get_by_role("tab", name="根据本地视频改写").click()
     assert page.get_by_text("开始改写", exact=True).is_visible()
@@ -61,7 +61,7 @@ with sync_playwright() as playwright:
 
     mobile = browser.new_page(viewport={"width": 390, "height": 844})
     mobile.goto(APP_URL, wait_until="networkidle")
-    assert mobile.get_by_text("afan Talking Head Agent", exact=True).is_visible()
+    assert mobile.get_by_text("afan Talking Video Agent", exact=True).is_visible()
     mobile.locator('.workflow-drawer [data-panel-nav="2"]').click()
     assert mobile.locator('.panel[data-panel="2"]').is_visible()
     page_widths = mobile.locator("html").evaluate("el => [el.scrollWidth, el.clientWidth]")

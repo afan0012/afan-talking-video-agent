@@ -6,10 +6,10 @@ SetCompressor /SOLID lzma
 !include "LogicLib.nsh"
 !include "nsDialogs.nsh"
 
-!define APP_NAME "afan Talking Head Agent"
-!define APP_DIR "afan Talking Head Agent"
+!define APP_NAME "afan Talking Video Agent"
+!define APP_DIR "afan Talking Video Agent"
 !ifndef OUTPUT_FILE
-!define OUTPUT_FILE "afan-Talking-Head-Agent-v0.1.0-Setup.exe"
+!define OUTPUT_FILE "afan-Talking-Video-Agent-v0.2.0-Setup.exe"
 !endif
 
 Name "${APP_NAME}"
@@ -18,10 +18,10 @@ InstallDir "$LOCALAPPDATA\Programs\${APP_DIR}"
 ShowInstDetails show
 ShowUnInstDetails show
 !define MUI_ABORTWARNING
-!define MUI_WELCOMEPAGE_TITLE "Welcome to afan Talking Head Agent"
-!define MUI_WELCOMEPAGE_TEXT "This wizard will install afan Talking Head Agent on your computer.$\r$\n$\r$\nClick Next to continue, or Cancel to exit."
+!define MUI_WELCOMEPAGE_TITLE "Welcome to afan Talking Video Agent"
+!define MUI_WELCOMEPAGE_TEXT "This wizard will install afan Talking Video Agent on your computer.$\r$\n$\r$\nClick Next to continue, or Cancel to exit."
 !define MUI_FINISHPAGE_RUN
-!define MUI_FINISHPAGE_RUN_TEXT "Launch afan Talking Head Agent after installation"
+!define MUI_FINISHPAGE_RUN_TEXT "Launch afan Talking Video Agent after installation"
 !define MUI_FINISHPAGE_RUN_FUNCTION "LaunchApp"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
@@ -67,33 +67,33 @@ FunctionEnd
 
 Section "Install"
   SetOutPath "$INSTDIR"
-  File /r "..\dist-windows\afan Talking Head Agent\*.*"
+  File /r "..\dist-windows\afan Talking Video Agent\*.*"
   CreateDirectory "$SMPROGRAMS\${APP_NAME}"
-  CreateShortCut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\afan Talking Head Agent.exe"
+  CreateShortCut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\afan Talking Video Agent.exe"
   ${If} $CreateDesktopShortcut == ${BST_CHECKED}
-    CreateShortCut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\afan Talking Head Agent.exe"
+    CreateShortCut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\afan Talking Video Agent.exe"
   ${EndIf}
   ${If} $EnableStartup == ${BST_CHECKED}
-    CreateShortCut "$SMSTARTUP\${APP_NAME}.lnk" "$INSTDIR\afan Talking Head Agent.exe"
+    CreateShortCut "$SMSTARTUP\${APP_NAME}.lnk" "$INSTDIR\afan Talking Video Agent.exe"
   ${EndIf}
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   ; 注册到「设置 → 应用」，让系统能列出并提供卸载入口
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Head Agent" "DisplayName" "${APP_NAME}"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Head Agent" "DisplayVersion" "0.1.0"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Head Agent" "Publisher" "afan0012"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Head Agent" "DisplayIcon" "$INSTDIR\afan Talking Head Agent.exe"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Head Agent" "UninstallString" '"$INSTDIR\Uninstall.exe"'
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Head Agent" "NoModify" 1
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Head Agent" "NoRepair" 1
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Head Agent" "EstimatedSize" 340417
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Video Agent" "DisplayName" "${APP_NAME}"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Video Agent" "DisplayVersion" "0.1.0"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Video Agent" "Publisher" "afan0012"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Video Agent" "DisplayIcon" "$INSTDIR\afan Talking Video Agent.exe"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Video Agent" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Video Agent" "NoModify" 1
+  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Video Agent" "NoRepair" 1
+  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Video Agent" "EstimatedSize" 340417
 SectionEnd
 
 Function LaunchApp
-  ExecShell "open" "$INSTDIR\afan Talking Head Agent.exe"
+  ExecShell "open" "$INSTDIR\afan Talking Video Agent.exe"
 FunctionEnd
 
 Section "Uninstall"
-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Head Agent"
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\afan Talking Video Agent"
   Delete "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk"
   RMDir "$SMPROGRAMS\${APP_NAME}"
   Delete "$DESKTOP\${APP_NAME}.lnk"

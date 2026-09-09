@@ -100,10 +100,10 @@ SOURCE_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _default_data_root() -> Path:
-    """Installed default data root (%LOCALAPPDATA%\\afan Talking Head Agent); development uses the project directory."""
+    """Installed default data root (%LOCALAPPDATA%\\afan Talking Video Agent); development uses the project directory."""
     if getattr(sys, "frozen", False):
         local_app_data = Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-        return local_app_data / "afan Talking Head Agent"
+        return local_app_data / "afan Talking Video Agent"
     return SOURCE_ROOT
 
 
@@ -128,12 +128,12 @@ def _dir_usage(root: Path) -> int:
 RESOURCE_ROOT = Path(getattr(sys, "_MEIPASS", SOURCE_ROOT))
 if getattr(sys, "frozen", False):
     local_app_data = Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-    default_root = local_app_data / "afan Talking Head Agent"
+    default_root = local_app_data / "afan Talking Video Agent"
 else:
     default_root = SOURCE_ROOT
 
 # 数据目录可由用户自定义：
-# 1. 环境变量 KOUBO_DATA_DIR（安装器/高级用户用）；
+# 1. 环境变量 AFAN_DATA_DIR（安装器/高级用户用）；
 # 2. 默认位置下的 data_location.txt 文件（网页设置里选择后写入，
 #    重启后生效——路径解析发生在所有路由之前，无法热切换）。
 USER_DATA_ROOT = default_root
@@ -3799,7 +3799,7 @@ def render_edit(job_id: str) -> None:
         store.update(job, status="failed", stage="剪辑导出失败", error=str(error))
 
 
-app = FastAPI(title="afan Talking Head Agent")
+app = FastAPI(title="afan Talking Video Agent")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -5065,7 +5065,7 @@ def download_result(job_id: str) -> FileResponse:
     path = JOBS_DIR / job.id / job.output_name
     if not path.exists():
         raise HTTPException(404, "成片文件已不存在")
-    return FileResponse(path, media_type="video/mp4", filename=f"talkforge-{job.id}.mp4")
+    return FileResponse(path, media_type="video/mp4", filename=f"talking-video-{job.id}.mp4")
 
 
 @app.post("/api/jobs")
@@ -5933,7 +5933,7 @@ def project_download(job_id: str) -> FileResponse:
     path = JOBS_DIR / job_id / filename
     if not path.exists():
         raise HTTPException(404, "成片文件不存在")
-    return FileResponse(path, media_type="video/mp4", filename=f"talkforge-{job.id}.mp4")
+    return FileResponse(path, media_type="video/mp4", filename=f"talking-video-{job.id}.mp4")
 
 
 @app.get("/api/projects/{job_id}/download/{artifact}")
@@ -5941,8 +5941,8 @@ def project_intermediate_download(job_id: str, artifact: str) -> FileResponse:
     """Download a generated intermediate artifact without exposing arbitrary files."""
     job = store.get(job_id)
     artifacts = {
-        "voice-preview": (job.preview_audio_name, "audio/wav", f"talkforge-{job.id}-voice-preview.wav"),
-        "lipsync-video": (job.output_name, "video/mp4", f"talkforge-{job.id}-lipsync.mp4"),
+        "voice-preview": (job.preview_audio_name, "audio/wav", f"talking-video-{job.id}-voice-preview.wav"),
+        "lipsync-video": (job.output_name, "video/mp4", f"talking-video-{job.id}-lipsync.mp4"),
     }
     if artifact not in artifacts:
         raise HTTPException(404, "未知的中间产物。")

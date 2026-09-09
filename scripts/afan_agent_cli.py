@@ -1,4 +1,4 @@
-"""Command-line client for the local afan Talking Head Agent service.
+﻿"""Command-line client for the local afan Talking Video Agent service.
 
 The CLI deliberately talks to the same FastAPI endpoints as the web UI.  It
 does not execute arbitrary shell commands or import the application in-process;

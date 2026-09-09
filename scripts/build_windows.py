@@ -1,4 +1,4 @@
-"""Build a self-contained Windows test package with PyInstaller.
+﻿"""Build a self-contained Windows test package with PyInstaller.
 
 Run this with a Python environment that already has the project requirements
 and PyInstaller installed.  The optional --ffmpeg argument embeds an FFmpeg
@@ -17,7 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist-windows"
 BUILD_CACHE = Path(os.environ.get("AFAN_BUILD_CACHE") or (ROOT / "work" / "build-cache"))
-APP_EXE_NAME = "afan Talking Head Agent"
+APP_EXE_NAME = "afan Talking Video Agent"
 
 # Heavy libraries that may exist in the build environment but are never (or
 # only optionally) used by the app.  PyInstaller's static analysis still
@@ -102,9 +102,9 @@ def main() -> None:
 
     app_dir = DIST / APP_EXE_NAME
     (app_dir / "测试说明.txt").write_text(
-        "Double-click afan Talking Head Agent.exe to start.\n"
+        "Double-click afan Talking Video Agent.exe to start.\n"
         "首次启动后在设置中填写你自己的 API Key。\n"
-        "User data is stored in %LOCALAPPDATA%\\afan Talking Head Agent, not the install directory.\n",
+        "User data is stored in %LOCALAPPDATA%\\afan Talking Video Agent, not the install directory.\n",
         encoding="utf-8-sig",
     )
     if args.installer:

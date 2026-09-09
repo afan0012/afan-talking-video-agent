@@ -1,10 +1,10 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-title afan Talking Head Agent
+title afan Talking Video Agent
 
 echo ============================================
-echo   afan Talking Head Agent - Local Startup
+echo   afan Talking Video Agent - Local Startup
 echo ============================================
 echo.
 

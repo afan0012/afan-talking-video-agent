@@ -2,7 +2,7 @@
 // keeping the data separate prevents visual template edits from touching the
 // workflow controller.
 window.TEMPLATE_CATALOG = {
-  storageKey: 'talkforge_packaging_templates_v1',
+  storageKey: 'afan_packaging_templates_v1',
   builtins: {
     title: [
       { id: 'title-classic', name: '顶部白字', fields: { title_font_size: 'h/18', title_color: 'white', title_position: 'top' } },

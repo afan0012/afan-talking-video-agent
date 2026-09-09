@@ -1,6 +1,6 @@
 let project = null;
 let activeModelRoutes = {};
-let activePanel = Math.min(5, Number(localStorage.getItem('talkforge_active_panel') || 1));
+let activePanel = Math.min(5, Number(localStorage.getItem('afan_active_panel') || 1));
 const $ = (selector) => document.querySelector(selector);
 const notice = $('#notice');
 const recreatePreviewButton = document.createElement('button');
@@ -245,7 +245,7 @@ const projectTitle = (name) => {
 function showPanel(panel) {
   const next = Math.min(5, Math.max(1, Number(panel) || 1));
   activePanel = next;
-  localStorage.setItem('talkforge_active_panel', String(next));
+  localStorage.setItem('afan_active_panel', String(next));
   document.querySelectorAll('.studio .panel').forEach((item) => {
     item.classList.toggle('panel-active', Number(item.dataset.panel) === next);
   });
@@ -709,7 +709,7 @@ async function refresh() {
   if (project.status === 'running') setTimeout(refresh, 2200);
 }
 
-const LAST_PROJECT_KEY = 'talkforge_last_project';
+const LAST_PROJECT_KEY = 'afan_last_project';
 function rememberProject() {
   if (project?.id) localStorage.setItem(LAST_PROJECT_KEY, project.id);
 }
