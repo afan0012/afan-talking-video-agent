@@ -106,7 +106,7 @@ def main() -> None:
             voice=f"data:{mime};base64,{voice_data}",
         )
 
-    print("\n试听完毕。效果能接受 → 可以走‘百炼+MiMo 双 key’收敛；效果不行 → 保留 Fish Audio。")
+    print("\n试听完毕。预置音色与声音克隆的音频已生成，可播放对比效果。")
 
 
 if __name__ == "__main__":
