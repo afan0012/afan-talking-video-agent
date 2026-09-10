@@ -18,6 +18,17 @@
 - 本地模型运行时与桌面主程序分离：模型安装好后，程序仅在本机 `127.0.0.1` 自动启动适配服务并连接，不把 PyTorch 和数 GB 模型塞进主程序。
 - 云端模型是否可用、是否收费、是否有免费额度，以服务商控制台当前显示为准。
 
+## 本地模型包下载（按需）
+
+Windows 安装包与便携版在 [GitHub Releases](../../releases) 页面下载。本地语音与改口型的模型权重和运行时体积较大，以压缩包形式放在夸克网盘，按需下载：
+
+- **夸克网盘**：<https://pan.quark.cn/s/6c423b30685b?pwd=QN2s>（提取码 `QN2s`）
+- `afan-voice-engines-*.zip`：本地转写（FunASR SenseVoice）与本地配音（Qwen3-TTS），含开箱即用的运行时，约 9.6 GB
+- `afan-musetalk-bundle-cu128-*.zip`：MuseTalk 1.5 改口型（RTX 30/40/50 系适配），含全部权重与运行时，约 10 GB
+- `HeyGem-Lite-模型包.tar.zst`：HeyGem Lite 改口型（可选，需 Docker Desktop；`.tar.zst` 在 Windows 10 需 7-Zip 解压）
+
+使用方法：下载后核对分享说明中的 SHA256，右键解压（保持顶层文件夹完整），然后进入「设置 → 本地 AI 引擎 → 一键接入模型包」，选中解压出的文件夹即可；运行时已内置，无需安装 Python/CUDA。RTX 50 系显卡需驱动 ≥570。
+
 ## 运行要求
 
 源码运行需要：
@@ -26,7 +37,7 @@
 - FFmpeg 和 ffprobe（缺失时启动脚本自动下载到数据目录 `tools\ffmpeg`，无需管理员权限、不改系统 PATH；Windows 安装包会随包提供）
 - 你自己配置的模型服务密钥（仅使用本地模型的环节可以不填云端密钥）
 
-项目当前以源码形式提供；仓库中的打包脚本用于开发者自行构建。
+普通用户推荐直接使用 [Releases](../../releases) 页面的 Windows 安装包或便携版；源码运行参见下文。仓库中的打包脚本用于开发者自行构建。
 
 ## Windows 快速开始
 
@@ -99,7 +110,7 @@ pytest -q
 
 ## 打包 Windows 安装包
 
-开发者可以使用 PyInstaller 和 NSIS/IExpress 构建 Windows 包。FFmpeg 必须使用可再分发的 LGPL 构建，并随包提供许可证文本：
+开发者可以使用 PyInstaller 和 NSIS/IExpress 构建 Windows 包。FFmpeg 必须使用可再分发的构建（如含 `libx264` 的 GPL 构建），并随包提供对应的许可证文本：
 
 ```powershell
 python scripts/build_windows.py --ffmpeg <path-to-ffmpeg.exe> --ffmpeg-license <path-to-license.txt> --installer
