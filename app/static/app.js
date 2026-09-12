@@ -10,15 +10,18 @@ recreatePreviewButton.className = 'secondary hidden';
 recreatePreviewButton.textContent = '重新生成试听';
 $('#video-stage').insertAdjacentElement('afterend', recreatePreviewButton);
 const api = async (url, options = {}) => {
+  // 所有 /api 请求都带上页面里注入的握手 token（后端 local_api_guard 校验），
+  // 防止其他网页在浏览器后台向 127.0.0.1 发起跨站写操作。
+  const headers = { ...(options.headers || {}), 'x-afan-token': window.__AFAN_TOKEN__ || '' };
   // 本地服务重启/打包更新的瞬间，旧 keep-alive 连接会让首次 fetch 直接失败；
   // 对幂等的 GET 自动重试一次，避免把设置页这类面板打成「Failed to fetch」。
   let response;
   try {
-    response = await fetch(url, options);
+    response = await fetch(url, { ...options, headers });
   } catch (error) {
     if ((options.method || 'GET').toUpperCase() !== 'GET') throw error;
     await new Promise((resolve) => setTimeout(resolve, 400));
-    response = await fetch(url, { ...options, headers: { ...(options.headers || {}), 'cache-control': 'no-cache' } });
+    response = await fetch(url, { ...options, headers: { ...headers, 'cache-control': 'no-cache' } });
   }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -88,7 +91,7 @@ function renderCoverTemplateCards() {
   const templates = templatesFor('cover');
   grid.innerHTML = templates.map((template) => {
     const preview = template.preview
-      ? `<img class="cover-template-preview" src="${escapeHtml(template.preview)}" alt="${escapeHtml(template.name)}预览" />`
+      ? `<img class="cover-template-preview" src="${escapeHtml(template.preview)}?v=20260912" alt="${escapeHtml(template.name)}预览" />`
       : '<div class="cover-template-preview template-preview-empty">自定义模板</div>';
     return `<article class="cover-template-card${template.id === selectedId ? ' selected' : ''}" data-cover-template-card="${escapeHtml(template.id)}">
       ${preview}<div class="cover-template-info"><strong>${escapeHtml(template.name)}</strong><span class="cover-template-badge">${template.id.startsWith('custom-') ? '自定义' : '系统模板'}</span></div>
@@ -103,7 +106,7 @@ function renderSubtitleTemplateCards() {
   const templates = templatesFor('subtitle');
   grid.innerHTML = templates.map((template) => {
     const preview = template.preview
-      ? `<img class="subtitle-template-preview" src="${escapeHtml(template.preview)}" alt="${escapeHtml(template.name)}预览" />`
+      ? `<img class="subtitle-template-preview" src="${escapeHtml(template.preview)}?v=20260912" alt="${escapeHtml(template.name)}预览" />`
       : '<div class="subtitle-template-preview template-preview-empty">自定义模板</div>';
     return `<article class="subtitle-template-card${template.id === selectedId ? ' selected' : ''}" data-subtitle-template-card="${escapeHtml(template.id)}">
       ${preview}<div class="subtitle-template-info"><strong>${escapeHtml(template.name)}</strong><span class="subtitle-template-badge">${template.id.startsWith('custom-') ? '自定义' : '系统模板'}</span></div>
@@ -2085,3 +2088,27 @@ if (/[?&]settings=open/.test(location.search)) setTimeout(function () {
     if (b) b.scrollTop = b.scrollHeight;
   }, 900);
 }, 400);
+
+
+// ── 本地服务心跳：托盘「退出」或「退出程序」后，遗留页面自动提示已失效 ──
+function showServiceDownOverlay() {
+  if (window.__serviceDownOverlayShown) return;
+  window.__serviceDownOverlayShown = true;
+  var overlay = document.createElement('div');
+  overlay.setAttribute('style', 'position:fixed;inset:0;z-index:99999;background:rgba(10,14,18,.93);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px');
+  overlay.innerHTML = '<div style="font-size:22px;font-weight:700">本地服务已退出</div>'
+    + '<div style="opacity:.75;line-height:1.8">这个页面已经失效，直接关闭即可。'
+    + '<br>重新使用请双击桌面快捷方式，或在托盘图标右键选择「打开界面」。</div>';
+  document.body.appendChild(overlay);
+}
+(function () {
+  var downTicks = 0;
+  setInterval(function () {
+    if (window.__serviceDownOverlayShown) return;
+    fetch('/api/health', { cache: 'no-store' }).then(function (r) {
+      if (r.ok) downTicks = 0;
+      else downTicks += 1;
+    }).catch(function () { downTicks += 1; });
+    if (downTicks >= 2) showServiceDownOverlay();
+  }, 4000);
+})();

@@ -23,6 +23,52 @@ DEFAULT_BASE_URL = "http://127.0.0.1:8000"
 DEFAULT_TIMEOUT = 30.0
 
 
+def _data_root_candidates() -> list[Path]:
+    """与服务端约定一致的数据目录候选（见 app/main.py 的 USER_DATA_ROOT）。"""
+    roots: list[Path] = []
+    env_dir = os.environ.get("AFAN_DATA_DIR", "").strip()
+    if env_dir:
+        roots.append(Path(env_dir))
+    local_app_data = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+    frozen_root = local_app_data / "afan Talking Video Agent"
+    location_file = frozen_root / "data_location.txt"
+    if location_file.is_file():
+        try:
+            custom = Path(location_file.read_text(encoding="utf-8").strip().strip('"'))
+            if custom.is_absolute():
+                roots.append(custom)
+        except OSError:
+            pass
+    roots.append(frozen_root)
+    roots.append(Path(__file__).resolve().parents[1])
+    return roots
+
+
+def _read_hint_file(name: str) -> str:
+    for root in _data_root_candidates():
+        hint = root / name
+        if hint.is_file():
+            try:
+                content = hint.read_text(encoding="utf-8").strip()
+            except OSError:
+                continue
+            if content:
+                return content
+    return ""
+
+
+def _discover_base_url() -> str:
+    """AFAN_AGENT_URL 优先；否则读取启动器记录的实际地址（随机端口场景）。"""
+    env_url = os.environ.get("AFAN_AGENT_URL", "").strip()
+    if env_url:
+        return env_url
+    return _read_hint_file("current_url.txt") or DEFAULT_BASE_URL
+
+
+def _discover_token() -> str:
+    return os.environ.get("AFAN_AGENT_TOKEN", "").strip() or _read_hint_file("agent_token.txt")
+
+
 class CliError(RuntimeError):
     """An expected, user-actionable CLI failure."""
 
@@ -31,10 +77,16 @@ class ApiClient:
     def __init__(self, base_url: str, timeout: float = DEFAULT_TIMEOUT) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.token = _discover_token()
 
     def request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
+        headers = {**(kwargs.pop("headers", None) or {})}
+        if path.startswith("/api/") and self.token:
+            # 服务端要求所有 /api 写操作携带握手 token（app/main.py local_api_guard），
+            # token 由服务启动时写入数据目录的 agent_token.txt，本函数自动读取。
+            headers.setdefault("x-afan-token", self.token)
         try:
-            response = httpx.request(method, f"{self.base_url}{path}", timeout=self.timeout, **kwargs)
+            response = httpx.request(method, f"{self.base_url}{path}", timeout=self.timeout, headers=headers, **kwargs)
         except httpx.HTTPError as error:
             raise CliError(
                 f"无法连接口播智能体服务：{self.base_url}。请先启动服务，或使用 --base-url 指定地址。\n{error}"
@@ -89,8 +141,8 @@ def _command_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--base-url",
-        default=os.environ.get("AFAN_AGENT_URL", DEFAULT_BASE_URL),
-        help="服务地址，默认读取 AFAN_AGENT_URL 或 http://127.0.0.1:8000",
+        default=_discover_base_url(),
+        help="服务地址，默认依次读取 AFAN_AGENT_URL、启动器记录的 current_url.txt、http://127.0.0.1:8000",
     )
     parser.add_argument(
         "--timeout",

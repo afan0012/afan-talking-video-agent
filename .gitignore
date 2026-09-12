@@ -82,3 +82,7 @@ _backup-*/
 runtime-jobs/
 logs/
 qwen-controls/
+
+# 本地服务握手 token 与端口记录（每次启动重新生成）
+agent_token.txt
+current_url.txt

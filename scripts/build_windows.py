@@ -68,7 +68,7 @@ def main() -> None:
         "--add-data", f"{ROOT / 'THIRD_PARTY_NOTICES.md'};licenses",
         # uvicorn receives the application as a string, so PyInstaller cannot
         # discover app.main through normal static import analysis.
-        "--collect-all", "dashscope", "--hidden-import", "multipart", "--hidden-import", "app.main",
+        "--collect-all", "dashscope", "--collect-all", "pystray", "--hidden-import", "multipart", "--hidden-import", "app.main",
         str(ROOT / "desktop_launcher.py"),
     ]
     for module in PYINSTALLER_EXCLUDES:

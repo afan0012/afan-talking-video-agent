@@ -3,3 +3,5 @@ uvicorn[standard]>=0.46,<0.47
 python-multipart>=0.0.20,<0.1
 dashscope>=1.25
 httpx>=0.28
+pystray>=0.19
+Pillow>=10

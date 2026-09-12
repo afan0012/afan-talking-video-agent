@@ -8,6 +8,7 @@ import mimetypes
 import os
 import re
 import queue
+import secrets
 import shutil
 import subprocess
 import sys
@@ -33,8 +34,33 @@ from dashscope.audio.qwen_tts_realtime.qwen_tts_realtime import (
 )
 from dashscope.utils.oss_utils import check_and_upload_local
 from fastapi import BackgroundTasks, Body, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+
+# ── 控制台子进程防崩（Windows）───────────────────────────────
+# 双击启动的打包版是无控制台的 GUI 进程，标准句柄无效；此时派生
+# ffmpeg/ffprobe 等控制台工具会偶发 STATUS_DLL_INIT_FAILED(0xC0000142)。
+# CREATE_NO_WINDOW 让每个子进程获得一套全新的隐藏控制台句柄，根治此问题。
+if os.name == "nt":
+    _CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+    def _patch_spawn(kwargs: dict[str, Any]) -> dict[str, Any]:
+        kwargs["creationflags"] = kwargs.get("creationflags", 0) | _CREATE_NO_WINDOW
+        return kwargs
+
+    _orig_subprocess_run = subprocess.run
+
+    def _subprocess_run(*args: Any, **kwargs: Any) -> Any:
+        return _orig_subprocess_run(*args, **_patch_spawn(kwargs))
+
+    subprocess.run = _subprocess_run  # type: ignore[assignment]
+
+    _orig_subprocess_popen = subprocess.Popen
+
+    def _subprocess_popen(*args: Any, **kwargs: Any) -> Any:
+        return _orig_subprocess_popen(*args, **_patch_spawn(kwargs))
+
+    subprocess.Popen = _subprocess_popen  # type: ignore[assignment]
 from app.digital_human import provider_for, provider_infos
 from app.domain import BrollClip, Job, now
 from app.funasr_local import FunASRAdapter
@@ -3802,6 +3828,50 @@ def render_edit(job_id: str) -> None:
 app = FastAPI(title="afan Talking Video Agent")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+# ── 本地接口防护 ─────────────────────────────────────────────
+# 浏览器允许任意网页向 127.0.0.1 静默发送跨站 POST（响应读不到，但请求会生效）。
+# 因此写操作必须携带页面里注入的握手 token：跨站脚本无法附加自定义头，
+# 预检请求也会因为没有 CORS 放行而失败；同时校验 Host 头，封堵 DNS rebinding。
+_API_TOKEN = secrets.token_urlsafe(24)
+
+# CLI 等 Agent 工具不是网页，拿不到页面注入的握手 token；本机同用户读写自己的
+# 数据目录与调用本机服务同级可信，因此把 token 落到数据目录供其读取。
+# token 只在文件不存在时生成一次并持久复用：测试导入、第二实例启动都不会
+# 覆盖它——若每次导入都重写，pytest 等进程会打断正在运行服务的 CLI 通道。
+_TOKEN_FILE = USER_DATA_ROOT / "agent_token.txt"
+try:
+    _existing_token = _TOKEN_FILE.read_text(encoding="utf-8").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{20,64}", _existing_token):
+        _existing_token = ""
+except OSError:
+    _existing_token = ""
+if _existing_token:
+    _API_TOKEN = _existing_token
+else:
+    try:
+        USER_DATA_ROOT.mkdir(parents=True, exist_ok=True)
+        _TOKEN_FILE.write_text(_API_TOKEN, encoding="utf-8")
+    except OSError:
+        pass  # 数据目录不可写时仅影响 CLI 调用，网页端不受影响
+
+
+# 这两个 GET 会在桌面弹原生文件夹选择框；前端经 api() 调用已带 token，
+# 一并纳入校验，防止恶意网页在后台反复弹窗骚扰。
+_DIALOG_GET_PATHS = {"/api/data-location/choose", "/api/local-engines/choose-dir"}
+
+
+@app.middleware("http")
+async def local_api_guard(request: Request, call_next):
+    host = (request.headers.get("host") or "").rsplit(":", 1)[0].strip("[]").lower()
+    if host not in {"127.0.0.1", "localhost", "::1"}:
+        return JSONResponse({"detail": "本服务只允许从 127.0.0.1 / localhost 访问。"}, status_code=403)
+    needs_token = request.url.path in _DIALOG_GET_PATHS or (
+        request.method in {"POST", "PUT", "DELETE", "PATCH"} and request.url.path.startswith("/api/")
+    )
+    if needs_token and request.headers.get("x-afan-token") != _API_TOKEN:
+        return JSONResponse({"detail": "页面与本地服务的安全握手已失效，请刷新页面后重试。"}, status_code=403)
+    return await call_next(request)
+
 
 @app.on_event("startup")
 def _reap_stale_local_adapters() -> None:
@@ -3816,8 +3886,15 @@ def _reap_stale_local_adapters() -> None:
 @app.get("/", response_class=HTMLResponse)
 def home() -> HTMLResponse:
     # 前端迭代频繁；避免浏览器继续使用旧 HTML，造成新脚本与旧页面结构不匹配。
+    html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    # 把接口握手 token 注入页面，前端 api() 会把它放进请求头（见 local_api_guard）。
+    html = html.replace(
+        "<head>",
+        f"<head><script>window.__AFAN_TOKEN__ = {json.dumps(_API_TOKEN)};</script>",
+        1,
+    )
     return HTMLResponse(
-        (STATIC_DIR / "index.html").read_text(encoding="utf-8"),
+        html,
         headers={"Cache-Control": "no-store, max-age=0"},
     )
 

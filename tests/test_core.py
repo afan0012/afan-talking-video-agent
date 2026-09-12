@@ -720,7 +720,7 @@ def test_voice_preview_stays_ready_when_optional_subtitle_alignment_fails(tmp_pa
 def test_extract_upload_requires_authorization():
     from fastapi.testclient import TestClient
 
-    client = TestClient(main.app)
+    client = TestClient(main.app, base_url="http://127.0.0.1", headers={"x-afan-token": main._API_TOKEN})
     response = client.post("/api/projects/extract-upload", files={"video": ("a.mp4", b"00", "video/mp4")})
 
     assert response.status_code == 400
@@ -742,7 +742,7 @@ def test_project_intermediate_downloads_are_allowlisted(tmp_path, monkeypatch):
     (work / "preview.wav").write_bytes(b"RIFF-preview")
     (work / "result.mp4").write_bytes(b"video-result")
 
-    client = TestClient(main.app)
+    client = TestClient(main.app, base_url="http://127.0.0.1", headers={"x-afan-token": main._API_TOKEN})
     audio = client.get(f"/api/projects/{job.id}/download/voice-preview")
     video = client.get(f"/api/projects/{job.id}/download/lipsync-video")
     blocked = client.get(f"/api/projects/{job.id}/download/anything-else")
@@ -760,7 +760,7 @@ def test_extract_upload_rejects_non_video(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
 
     monkeypatch.setattr(main, "JOBS_DIR", tmp_path)
-    client = TestClient(main.app)
+    client = TestClient(main.app, base_url="http://127.0.0.1", headers={"x-afan-token": main._API_TOKEN})
     response = client.post(
         "/api/projects/extract-upload",
         files={"video": ("a.txt", b"hello", "text/plain")},
