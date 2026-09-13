@@ -4468,9 +4468,12 @@ def get_data_location() -> dict[str, Any]:
     }
 
 
-@app.get("/api/data-location/choose")
-def choose_data_location() -> dict[str, Any]:
-    """打开系统文件夹选择器，返回用户选中的目录；取消时 path 为空。"""
+def _pick_folder_dialog(title: str, initialdir: str | None = None) -> str:
+    """弹出系统文件夹选择框，返回选中路径（取消返回空串）。
+
+    优先 tkinter（源码开发环境）；打包版里 tkinter 不可用时退回
+    PowerShell 的 FolderBrowserDialog——Windows 必有 PowerShell，零额外依赖。
+    """
     try:
         import tkinter as tk
         from tkinter import filedialog
@@ -4479,13 +4482,38 @@ def choose_data_location() -> dict[str, Any]:
         root.withdraw()
         root.attributes("-topmost", True)
         try:
-            selected = filedialog.askdirectory(
-                title="选择数据保存文件夹",
-                initialdir=str(USER_DATA_ROOT if USER_DATA_ROOT.exists() else _default_data_root()),
-                mustexist=False,
-            )
+            kwargs: dict[str, Any] = {"title": title}
+            if initialdir:
+                kwargs["initialdir"] = initialdir
+            return filedialog.askdirectory(**kwargs) or ""
         finally:
             root.destroy()
+    except Exception:
+        pass
+
+    script = (
+        "Add-Type -AssemblyName System.Windows.Forms | Out-Null; "
+        "$d = New-Object System.Windows.Forms.FolderBrowserDialog; "
+        f"$d.Description = '{title}'; "
+        "if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) "
+        "{ Write-Output $d.SelectedPath }"
+    )
+    result = subprocess.run(
+        ["powershell", "-NoProfile", "-STA", "-Command", script],
+        capture_output=True, text=True, timeout=600,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    return result.stdout.strip()
+
+
+@app.get("/api/data-location/choose")
+def choose_data_location() -> dict[str, Any]:
+    """打开系统文件夹选择器，返回用户选中的目录；取消时 path 为空。"""
+    try:
+        selected = _pick_folder_dialog(
+            "选择数据保存文件夹",
+            str(USER_DATA_ROOT if USER_DATA_ROOT.exists() else _default_data_root()),
+        )
     except Exception as error:
         raise HTTPException(501, f"无法打开系统文件夹选择器：{error}") from error
     return {"ok": True, "path": selected}
@@ -4499,16 +4527,7 @@ def choose_engine_dir() -> dict[str, Any]:
     无关），所以和「数据保存位置」一样由本机后端进程代开原生选择框。
     """
     try:
-        import tkinter as tk
-        from tkinter import filedialog
-
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
-        try:
-            selected = filedialog.askdirectory(title="选择模型包所在文件夹")
-        finally:
-            root.destroy()
+        selected = _pick_folder_dialog("选择模型包所在文件夹")
     except Exception as error:
         raise HTTPException(501, f"无法打开系统文件夹选择器：{error}") from error
     return {"ok": True, "path": selected}

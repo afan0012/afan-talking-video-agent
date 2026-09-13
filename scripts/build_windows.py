@@ -24,12 +24,13 @@ APP_EXE_NAME = "afan Talking Video Agent"
 # pulls them in through lazy imports; excluding them keeps the bundle near
 # 300 MB instead of ~1.5 GB.  cv2 / faster_whisper are guarded by try/except
 # at runtime, so their absence only disables local preflight / whisper
-# fallback paths.
+# fallback paths.  NOTE: tkinter must stay bundled — the folder pickers
+# (data location / engine directory) are built on tkinter.filedialog.
 PYINSTALLER_EXCLUDES = (
     "torch", "torchvision", "torchaudio",
     "faster_whisper", "ctranslate2", "transformers", "tokenizers",
     "onnxruntime", "cv2", "pyarrow", "scipy", "pandas",
-    "sklearn", "botocore", "boto3", "av", "tkinter",
+    "sklearn", "botocore", "boto3", "av",
 )
 
 
@@ -68,7 +69,8 @@ def main() -> None:
         "--add-data", f"{ROOT / 'THIRD_PARTY_NOTICES.md'};licenses",
         # uvicorn receives the application as a string, so PyInstaller cannot
         # discover app.main through normal static import analysis.
-        "--collect-all", "dashscope", "--collect-all", "pystray", "--hidden-import", "multipart", "--hidden-import", "app.main",
+        "--collect-all", "dashscope", "--collect-all", "pystray", "--collect-all", "tkinter",
+        "--hidden-import", "multipart", "--hidden-import", "app.main",
         str(ROOT / "desktop_launcher.py"),
     ]
     for module in PYINSTALLER_EXCLUDES:
