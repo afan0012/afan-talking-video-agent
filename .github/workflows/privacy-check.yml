@@ -1,0 +1,30 @@
+name: Privacy check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  git-history:
+    name: Reject personal QQ identity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan commit author emails
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            python scripts/check_public_history.py "$GITHUB_BASE_SHA..$GITHUB_HEAD_SHA"
+          else
+            python scripts/check_public_history.py --all
+          fi
