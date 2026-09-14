@@ -4,7 +4,14 @@ import zipfile
 
 import pytest
 
-from app.local_engine import _extract_archive, bundled_bin_dir, inspect_engine, resolve_ffmpeg, tools_ffmpeg_dir
+from app.local_engine import (
+    _extract_archive,
+    apply_musetalk_windows_compat,
+    bundled_bin_dir,
+    inspect_engine,
+    resolve_ffmpeg,
+    tools_ffmpeg_dir,
+)
 
 
 def _make_engine(root: Path) -> None:
@@ -77,4 +84,76 @@ def test_resolve_ffmpeg_uses_bundled_bin_when_frozen(tmp_path, monkeypatch):
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(tmp_path / "afan Talking Video Agent.exe"))
     assert resolve_ffmpeg(tmp_path) == str(exe)
+
+
+# 上游 MuseTalk inference.py 的骨架（含全部待补丁锚点），行尾用 CRLF 模拟真实引擎包。
+_MUSE_FIXTURE = "\r\n".join([
+    "def fast_check_ffmpeg():",
+    "    try:",
+    "        subprocess.run([\"ffmpeg\", \"-version\"], capture_output=True, check=True)",
+    "        return True",
+    "    except:",
+    "        return False",
+    "",
+    "",
+    "def main(args):",
+    "    if not fast_check_ffmpeg():",
+    "        if not fast_check_ffmpeg():",
+    "            print(\"Warning: Unable to find ffmpeg, please ensure ffmpeg is properly installed\")",
+    "",
+    "    # Process each task",
+    "    for task_id in inference_config:",
+    "        try:",
+    "            if get_file_type(video_path) == \"video\":",
+    "                save_dir_full = os.path.join(temp_dir, input_basename)",
+    "                os.makedirs(save_dir_full, exist_ok=True)",
+    "                cmd = f\"ffmpeg -v fatal -i {video_path} -start_number 0 {save_dir_full}/%08d.png\"",
+    "                os.system(cmd)",
+    "                input_img_list = sorted(glob.glob(os.path.join(save_dir_full, '*.[jpJP][pnPN]*[gG]')))",
+    "                fps = get_video_fps(video_path)",
+    "            # Save prediction results",
+    "            temp_vid_path = f\"{temp_dir}/temp_{input_basename}_{audio_basename}.mp4\"",
+    "            cmd_img2video = f\"ffmpeg -y -v warning -r {fps} -f image2 -i {result_img_save_path}/%08d.png -vcodec libx264 -vf format=yuv420p -crf 18 {temp_vid_path}\"",
+    "            print(\"Video generation command:\", cmd_img2video)",
+    "            os.system(cmd_img2video)",
+    "            cmd_combine_audio = f\"ffmpeg -y -v warning -i {audio_path} -i {temp_vid_path} {output_vid_name}\"",
+    "            print(\"Audio combination command:\", cmd_combine_audio)",
+    "            os.system(cmd_combine_audio)",
+    "        except Exception as e:",
+    "            traceback.print_exc()",
+    "            print(\"Error occurred during processing:\", e)",
+    "",
+    "",
+    "if __name__ == \"__main__\":",
+    "    main(args)",
+    "",
+])
+
+
+def test_apply_musetalk_windows_compat_patches_and_is_idempotent(tmp_path):
+    target = tmp_path / "inference.py"
+    target.write_text(_MUSE_FIXTURE, encoding="utf-8", newline="")
+    assert apply_musetalk_windows_compat(target) == "patched"
+
+    patched = target.read_text(encoding="utf-8")
+    assert "os.system(cmd_img2video)" not in patched
+    assert "os.system(cmd_combine_audio)" not in patched
+    assert "subprocess.run([ffmpeg_bin" in patched
+    assert "task_failed = True" in patched and "sys.exit(1)" in patched
+    assert "def probe_fps(video_path, ffprobe_bin):" in patched
+    compile(patched, "inference.py", "exec")
+
+    backup = target.with_suffix(".py.afan-backup")
+    assert backup.is_file()
+    assert backup.read_bytes().decode("utf-8") == _MUSE_FIXTURE
+
+    assert apply_musetalk_windows_compat(target) == "already"
+    assert target.read_text(encoding="utf-8") == patched
+
+
+def test_apply_musetalk_windows_compat_skips_unknown_content(tmp_path):
+    target = tmp_path / "inference.py"
+    target.write_text("print('already fixed upstream')\n", encoding="utf-8")
+    assert apply_musetalk_windows_compat(target) == "skipped"
+    assert target.read_text(encoding="utf-8") == "print('already fixed upstream')\n"
 

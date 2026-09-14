@@ -26,7 +26,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Mapping
 
-from app.local_engine import resolve_ffmpeg
+from app.local_engine import apply_musetalk_windows_compat, resolve_ffmpeg
 
 
 _LOCK = threading.RLock()
@@ -238,6 +238,12 @@ def start_musetalk(data_root: Path, adapter_script: Path, *, engine_root: Path |
     required = [root / "scripts" / "inference.py", root / "models" / "musetalkV15" / "unet.pth"]
     if not all(path.is_file() for path in required):
         return {"status": "missing", "url": "", "error": "MuseTalk 1.5 本地引擎尚未安装完整。"}
+    # 上游 inference.py 的 os.system 不支持含空格的路径（%LOCALAPPDATA% 数据
+    # 目录必含空格），启动前自动打成 subprocess.run 兼容版；幂等，失败不阻塞启动。
+    try:
+        apply_musetalk_windows_compat(root / "scripts" / "inference.py")
+    except OSError:
+        pass
     port = _port()
     url = f"http://127.0.0.1:{port}"
     environment = os.environ.copy()

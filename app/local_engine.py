@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -73,6 +74,156 @@ def resolve_ffmpeg(data_root: Path | None = None, settings: Mapping[str, str] | 
         if candidate.is_file():
             return str(candidate)
     return shutil.which("ffmpeg") or ""
+
+
+# ---------------------------------------------------------------------------
+# 上游 MuseTalk inference.py 的 Windows 空格路径兼容补丁
+# ---------------------------------------------------------------------------
+
+_MUSE_COMPAT_MARKER = "ffmpeg_bin = args.ffmpeg_path"
+
+_MUSE_COMPAT_PROBE_FPS = (
+    "\n\n"
+    "def probe_fps(video_path, ffprobe_bin):\n"
+    "    probe = subprocess.run(\n"
+    "        [ffprobe_bin, \"-v\", \"error\", \"-select_streams\", \"v:0\",\n"
+    "         \"-show_entries\", \"stream=r_frame_rate\", \"-of\", \"default=nw=1:nk=1\", str(video_path)],\n"
+    "        capture_output=True, text=True,\n"
+    "    )\n"
+    "    rate = probe.stdout.strip().splitlines()[0] if probe.stdout.strip() else \"\"\n"
+    "    if \"/\" in rate:\n"
+    "        num, den = rate.split(\"/\", 1)\n"
+    "        if float(den):\n"
+    "            return float(num) / float(den)\n"
+    "    raise ValueError(f\"Unable to determine the FPS of video: {video_path}\")\n"
+)
+
+_MUSE_COMPAT_FFMPEG_BIN = (
+    "\n    # afan-compat: paths may contain spaces; always invoke ffmpeg via argument lists.\n"
+    "    ffmpeg_bin = args.ffmpeg_path if os.path.isfile(args.ffmpeg_path) else \"ffmpeg\"\n"
+    "    ffprobe_bin = os.path.join(os.path.dirname(os.path.abspath(ffmpeg_bin)),\n"
+    "                               \"ffprobe.exe\" if os.name == \"nt\" else \"ffprobe\")\n"
+)
+
+_MUSE_COMPAT_EXTRACT = (
+    "extract = subprocess.run([ffmpeg_bin, \"-v\", \"fatal\", \"-i\", str(video_path),\n"
+    "                                          \"-start_number\", \"0\", os.path.join(save_dir_full, \"%08d.png\")])\n"
+    "                if extract.returncode != 0:\n"
+    "                    raise RuntimeError(f\"ffmpeg frame extraction failed with exit code {extract.returncode}\")\n"
+    "\\1input_img_list = sorted(glob.glob(os.path.join(save_dir_full, '*.[jpJP][pnPN]*[gG]')))\n"
+    "                if not input_img_list:\n"
+    "                    raise RuntimeError(\"No frames extracted from the source video\")\n"
+    "                fps = get_video_fps(video_path)\n"
+    "                if not fps or fps <= 0:\n"
+    "                    fps = probe_fps(video_path, ffprobe_bin)"
+)
+
+_MUSE_COMPAT_SAVE = (
+    "subprocess.run([ffmpeg_bin, \"-y\", \"-v\", \"warning\", \"-r\", str(fps), \"-f\", \"image2\",\n"
+    "                            \"-i\", os.path.join(result_img_save_path, \"%08d.png\"),\n"
+    "                            \"-vcodec\", \"libx264\", \"-vf\", \"format=yuv420p\", \"-crf\", \"18\", temp_vid_path],\n"
+    "                           check=True)\n"
+    "            subprocess.run([ffmpeg_bin, \"-y\", \"-v\", \"warning\", \"-i\", str(audio_path),\n"
+    "                            \"-i\", temp_vid_path, output_vid_name], check=True)"
+)
+
+
+def apply_musetalk_windows_compat(inference_py: Path) -> str:
+    """把上游 MuseTalk ``scripts/inference.py`` 打成 Windows 空格路径兼容版。
+
+    上游用未加引号的 ``os.system`` 拼 ffmpeg 命令，任务目录含空格（例如
+    ``%LOCALAPPDATA%\\afan Talking Video Agent\\runtime-jobs``）时抽帧会
+    静默失败，空帧列表随后在 preprocessing 里触发除零，而任务级
+    try/except 吞掉异常后进程仍以 0 退出，控制器只能报「没有找到输出
+    MP4」。这里把三处 os.system 替换为 subprocess.run 列表调用，并让
+    任务失败时以非零码退出，控制器从而能看到真实原因。
+
+    幂等：已打过补丁返回 ``already``；识别不出上游代码（新版本/已修复）
+    返回 ``skipped`` 且不改动文件；首次打补丁前写入 ``.afan-backup`` 备份。
+    """
+    try:
+        raw = inference_py.read_bytes()
+        text = raw.decode("utf-8")
+    except (OSError, UnicodeDecodeError):
+        return "skipped"
+    if _MUSE_COMPAT_MARKER in text:
+        return "already"
+
+    crlf = "\r\n" in text
+    src = text.replace("\r\n", "\n")
+
+    try:
+        compile(src, str(inference_py), "exec")
+        original_compiles = True
+    except SyntaxError:
+        original_compiles = False
+
+    patched = src
+
+    # 1) fast_check_ffmpeg 后追加 probe_fps（cv2 读不出 fps 时用 ffprobe 兜底）
+    fast_check_tail = "    except:\n        return False\n"
+    if patched.count(fast_check_tail) != 1:
+        return "skipped"
+    patched = patched.replace(fast_check_tail, fast_check_tail + _MUSE_COMPAT_PROBE_FPS)
+
+    # 2) main() 里解析 ffmpeg/ffprobe 可执行路径
+    warning_line = "            print(\"Warning: Unable to find ffmpeg, please ensure ffmpeg is properly installed\")\n"
+    if patched.count(warning_line) != 1:
+        return "skipped"
+    patched = patched.replace(warning_line, warning_line + _MUSE_COMPAT_FFMPEG_BIN)
+
+    # 3) 抽帧：os.system → subprocess.run，失败显式报错；空帧列表显式报错；
+    #    fps 无效时用 ffprobe 兜底
+    extract_pattern = re.compile(
+        r"cmd = f\"ffmpeg -v fatal -i \{video_path\} -start_number 0 \{save_dir_full\}/%08d\.png\"\n"
+        r"\s*os\.system\(cmd\)\n"
+        r"(\s*)input_img_list = sorted\(glob\.glob\(os\.path\.join\(save_dir_full, '\*\.\[jpJP\]\[pnPN\]\*\[gG\]'\)\)\)\n"
+        r"\s*fps = get_video_fps\(video_path\)"
+    )
+    if len(extract_pattern.findall(patched)) != 1:
+        return "skipped"
+    patched = extract_pattern.sub(_MUSE_COMPAT_EXTRACT, patched)
+
+    # 4) 出片与合音频：os.system → subprocess.run(check=True)
+    save_pattern = re.compile(
+        r"cmd_img2video = f\"ffmpeg -y -v warning -r \{fps\} -f image2 -i \{result_img_save_path\}/%08d\.png"
+        r" -vcodec libx264 -vf format=yuv420p -crf 18 \{temp_vid_path\}\"\n"
+        r"\s*print\(\"Video generation command:\", cmd_img2video\)\s*\n"
+        r"\s*os\.system\(cmd_img2video\)\s*\n"
+        r"\s*cmd_combine_audio = f\"ffmpeg -y -v warning -i \{audio_path\} -i \{temp_vid_path\} \{output_vid_name\}\"\n"
+        r"\s*print\(\"Audio combination command:\", cmd_combine_audio\)\s*\n"
+        r"\s*os\.system\(cmd_combine_audio\)"
+    )
+    if len(save_pattern.findall(patched)) != 1:
+        return "skipped"
+    patched = save_pattern.sub(_MUSE_COMPAT_SAVE, patched)
+
+    # 5) 任务失败置位 + 进程非零退出（控制器因此能看到真实错误）
+    loop_head = "    # Process each task\n    for task_id in inference_config:\n"
+    if patched.count(loop_head) != 1:
+        return "skipped"
+    patched = patched.replace(loop_head, "    # Process each task\n    task_failed = False\n    for task_id in inference_config:\n")
+
+    except_tail = "        except Exception as e:\n            traceback.print_exc()\n            print(\"Error occurred during processing:\", e)\n"
+    if patched.count(except_tail) != 1:
+        return "skipped"
+    patched = patched.replace(
+        except_tail,
+        except_tail + "            task_failed = True\n    if task_failed:\n        sys.exit(1)\n",
+    )
+
+    if original_compiles:
+        try:
+            compile(patched, str(inference_py), "exec")
+        except SyntaxError:
+            return "skipped"
+
+    backup = inference_py.with_suffix(inference_py.suffix + ".afan-backup")
+    if not backup.exists():
+        backup.write_bytes(raw)
+    out = patched.replace("\n", "\r\n") if crlf else patched
+    inference_py.write_bytes(out.encode("utf-8"))
+    return "patched"
 
 
 def _set_state(**updates: Any) -> None:
