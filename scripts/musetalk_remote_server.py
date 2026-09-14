@@ -123,6 +123,9 @@ def health() -> dict[str, Any]:
         "root": str(ROOT),
         "weights": (ROOT / "models/musetalkV15/unet.pth").is_file(),
         "cuda_visible": bool(os.getenv("CUDA_VISIBLE_DEVICES", "0")),
+        # 控制器复用旧实例前用它校验环境是否仍然有效（见 app/local_runtime.py）。
+        "ffmpeg_ok": Path(FFMPEG_PATH).is_file() or shutil.which("ffmpeg") is not None,
+        "ffmpeg_path": FFMPEG_PATH,
     }
 
 

@@ -1,9 +1,10 @@
 from pathlib import Path
+import sys
 import zipfile
 
 import pytest
 
-from app.local_engine import _extract_archive, inspect_engine, resolve_ffmpeg, tools_ffmpeg_dir
+from app.local_engine import _extract_archive, bundled_bin_dir, inspect_engine, resolve_ffmpeg, tools_ffmpeg_dir
 
 
 def _make_engine(root: Path) -> None:
@@ -57,4 +58,23 @@ def test_resolve_ffmpeg_returns_empty_when_nothing_found(tmp_path, monkeypatch):
     monkeypatch.delenv("FFMPEG_PATH", raising=False)
     monkeypatch.setattr("app.local_engine.shutil.which", lambda name: None)
     assert resolve_ffmpeg(tmp_path) == ""
+
+
+def test_bundled_bin_dir_requires_frozen(tmp_path, monkeypatch):
+    monkeypatch.setattr(sys, "frozen", False, raising=False)
+    assert bundled_bin_dir() is None
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "afan Talking Video Agent.exe"))
+    assert bundled_bin_dir() == tmp_path / "_internal" / "bin"
+
+
+def test_resolve_ffmpeg_uses_bundled_bin_when_frozen(tmp_path, monkeypatch):
+    # 打包版全新安装：settings/env/tools 全部为空时，回落到安装包自带的 _internal/bin。
+    monkeypatch.delenv("FFMPEG_PATH", raising=False)
+    exe = tmp_path / "_internal" / "bin" / "ffmpeg.exe"
+    exe.parent.mkdir(parents=True)
+    exe.write_bytes(b"stub")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "afan Talking Video Agent.exe"))
+    assert resolve_ffmpeg(tmp_path) == str(exe)
 

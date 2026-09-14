@@ -14,6 +14,7 @@ executables or model files.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import socket
@@ -55,6 +56,17 @@ def _ready(url: str, *, timeout: float = 18) -> bool:
     return False
 
 
+def _health(url: str, *, timeout: float = 3.0) -> dict[str, Any] | None:
+    """读取适配器的 /health 内容；不可达或旧版返回 None。"""
+    try:
+        with urllib.request.urlopen(f"{url}/health", timeout=timeout) as response:
+            if 200 <= response.status < 300:
+                return json.loads(response.read().decode("utf-8", "replace"))
+    except (OSError, ValueError):
+        return None
+    return None
+
+
 def _engine_python(root: Path, variable: str, settings: Mapping[str, str] | None = None) -> str:
     # 解释器优先取设置页保存的路径（导入模型包时写入），其次 OS 环境变量。
     configured = str((settings or {}).get(variable) or os.getenv(variable, "")).strip()
@@ -78,6 +90,35 @@ def _stop_dead(name: str) -> None:
     if process and process.poll() is not None:
         _PROCESSES.pop(name, None)
         _STATE[name].update(status="stopped", url="", error="本地模型服务已退出。")
+
+
+def _require_fresh_environment(name: str, *, ffmpeg_ok: bool) -> None:
+    """环境变化后重启仍在服役的旧适配器实例。
+
+    适配器进程会存活很久，继承的是启动那一刻的环境；配置修复（例如
+    ffmpeg 就位）后，旧实例会把每一次推理都带进同样的失败。这里用
+    /health 暴露的 ffmpeg_ok 发现这种错位并重启实例；旧版适配器没有
+    该字段时保持原行为，由复用逻辑照常接管。
+    """
+    with _LOCK:
+        process = _PROCESSES.get(name)
+    if process is None or process.poll() is not None:
+        return
+    url = str(_STATE[name].get("url") or "")
+    if not url:
+        return
+    health = _health(url)
+    if health is None or "ffmpeg_ok" not in health:
+        return
+    if bool(health["ffmpeg_ok"]) == ffmpeg_ok:
+        return
+    try:
+        process.terminate()
+    except OSError:
+        pass
+    with _LOCK:
+        _PROCESSES.pop(name, None)
+        _STATE[name].update(status="stopped", url="", error="本地模型环境已更新，正在以新配置重启。")
 
 
 def status(name: str) -> dict[str, Any]:
@@ -203,6 +244,7 @@ def start_musetalk(data_root: Path, adapter_script: Path, *, engine_root: Path |
     ffmpeg = resolve_ffmpeg(data_root)
     if ffmpeg:
         environment["FFMPEG_PATH"] = ffmpeg
+    _require_fresh_environment("musetalk", ffmpeg_ok=bool(ffmpeg))
     environment.update({
         "MUSETALK_ROOT": str(root),
         "MUSETALK_JOBS_ROOT": str(data_root / "runtime-jobs" / "musetalk"),

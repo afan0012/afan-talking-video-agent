@@ -11,6 +11,7 @@ import hashlib
 import os
 import shutil
 import subprocess
+import sys
 import tarfile
 import threading
 import time
@@ -41,11 +42,22 @@ def tools_ffmpeg_dir(data_root: Path) -> Path:
     return data_root / "tools" / "ffmpeg" / "bin"
 
 
+def bundled_bin_dir() -> Path | None:
+    """安装包自带的 ffmpeg 目录（build_windows.py --ffmpeg 嵌入 _internal/bin）。
+
+    源码运行没有这个目录，交由 tools/ffmpeg/bin、ensure_ffmpeg.py 或 PATH 兜底。
+    """
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent / "_internal" / "bin"
+    return None
+
+
 def resolve_ffmpeg(data_root: Path | None = None, settings: Mapping[str, str] | None = None) -> str:
     """按用户可维护的顺序解析 FFmpeg 可执行文件路径。
 
     优先级：设置项/环境变量 → 数据目录 tools\ffmpeg\bin（开箱即用的自动
-    下载位置）→ PATH。全部落空返回空字符串，由调用方决定如何提示。
+    下载位置）→ 安装包自带 _internal/bin → PATH。全部落空返回空字符串，
+    由调用方决定如何提示。
     """
     candidates: list[Path] = []
     configured = str((settings or {}).get("FFMPEG_PATH") or os.getenv("FFMPEG_PATH", "")).strip()
@@ -54,6 +66,9 @@ def resolve_ffmpeg(data_root: Path | None = None, settings: Mapping[str, str] | 
         candidates.append(candidate / "ffmpeg.exe" if candidate.is_dir() else candidate)
     if data_root is not None:
         candidates.append(tools_ffmpeg_dir(data_root) / "ffmpeg.exe")
+    bundled = bundled_bin_dir()
+    if bundled is not None:
+        candidates.append(bundled / "ffmpeg.exe")
     for candidate in candidates:
         if candidate.is_file():
             return str(candidate)
