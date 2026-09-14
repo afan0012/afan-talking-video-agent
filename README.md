@@ -14,7 +14,7 @@
 
 - 文案生成、改写和部分编辑方案支持 MiMo、百炼、Ollama 以及配置好的 OpenAI 兼容服务。
 - ASR、声音复刻、标准配音和改口型依赖对应的模型适配器；不同模型需要不同服务商的接口和权限。
-- 改口型支持阿里云百炼 VideoRetalk（云端）、MuseTalk 1.5（本地）与 HeyGem Lite（本地，Docker）；本地声音支持 Qwen3-TTS 的样音复刻与内置音色。
+- 改口型支持阿里云百炼 VideoRetalk（云端）、MuseTalk 1.5（本地）；本地声音支持 Qwen3-TTS 的样音复刻与内置音色。
 - 本地模型运行时与桌面主程序分离：模型安装好后，程序仅在本机 `127.0.0.1` 自动启动适配服务并连接，不把 PyTorch 和数 GB 模型塞进主程序。
 - 云端模型是否可用、是否收费、是否有免费额度，以服务商控制台当前显示为准。
 
@@ -22,10 +22,9 @@
 
 Windows 安装包与便携版在 [GitHub Releases](../../releases) 页面下载。本地语音与改口型的模型权重和运行时体积较大，以压缩包形式放在夸克网盘，按需下载：
 
-- **夸克网盘**：<https://pan.quark.cn/s/6c423b30685b?pwd=QN2s>（提取码 `QN2s`）
+- **夸克网盘**：<https://pan.quark.cn/s/555ab9c2abd5?pwd=39Bq>（提取码 `39Bq`）
 - `afan-voice-engines-*.zip`：本地转写（FunASR SenseVoice）与本地配音（Qwen3-TTS），含开箱即用的运行时，约 9.6 GB
 - `afan-musetalk-bundle-cu128-*.zip`：MuseTalk 1.5 改口型（RTX 30/40/50 系适配），含全部权重与运行时，约 10 GB
-- `HeyGem-Lite-模型包.tar.zst`：HeyGem Lite 改口型（可选，需 Docker Desktop；`.tar.zst` 在 Windows 10 需 7-Zip 解压）
 
 使用方法：下载后核对分享说明中的 SHA256，右键解压（保持顶层文件夹完整），然后进入「设置 → 本地 AI 引擎 → 一键接入模型包」，选中解压出的文件夹即可；运行时已内置，无需安装 Python/CUDA。RTX 50 系显卡需驱动 ≥570。
 
@@ -75,7 +74,7 @@ CLI 是稳定的基础调用入口；以后可以在它之上增加一个薄 MCP
 
 ### 本地 AI 引擎
 
-进入「设置 → 本地 AI 引擎」可统一查看四类本地能力：Ollama（文案与改写）、FunASR（转写与字幕对轴）、Qwen3-TTS（声音复刻与内置音色）、MuseTalk（视频改口型）。本版本只检测、连接和启动已安装的组件，**不会自动下载模型、权重或 CUDA 运行时**；组件放入应用显示的标准目录后，重新检测即可启用。普通用户不需要填写 URL、端口、SSH、Docker 路径或推理命令。
+进入「设置 → 本地 AI 引擎」可统一查看四类本地能力：Ollama（文案与改写）、FunASR（转写与字幕对轴）、Qwen3-TTS（声音复刻与内置音色）、MuseTalk（视频改口型）。本版本只检测、连接和启动已安装的组件，**不会自动下载模型、权重或 CUDA 运行时**；组件放入应用显示的标准目录后，重新检测即可启用。
 
 文档中出现的 `engines/musetalk-1.5` 是相对于“当前数据目录”的内部目录名，不是固定的 D 盘绝对路径。源码运行时数据目录默认为项目目录；安装版默认为 `%LOCALAPPDATA%\\afan Talking Video Agent`；用户也可以在「偏好设置」改到其他磁盘。普通用户不需要手动填写或记住完整路径。
 
@@ -83,11 +82,10 @@ CLI 是稳定的基础调用入口；以后可以在它之上增加一个薄 MCP
 
 本地引擎目前使用官方项目或模型页提供的安装方式。下载、解压或创建模型环境后，将组件按「本地 AI 引擎」显示的标准目录放置即可；程序只识别已存在的文件，不会静默替换成来源不明的模型包。
 
-`scripts/musetalk_remote_server.py`、`scripts/qwen_tts_server.py` 与 `scripts/funasr_server.py` 是桌面端自动启动的本机适配服务，默认只监听本机回环地址。普通用户不需要填写服务地址、端口、SSH、Docker 路径或推理命令。
+`scripts/musetalk_remote_server.py`、`scripts/qwen_tts_server.py` 与 `scripts/funasr_server.py` 是桌面端自动启动的本机适配服务，默认只监听本机回环地址。
 
-HeyGem Lite（视频改口型，可选）以 Docker 镜像分发：在「设置 → 本地 AI 引擎」的 HeyGem 卡片中放入模型包目录后，软件可一键完成环境准备（自动下载并静默安装 Docker Desktop、启用 WSL2、导入镜像、启动容器），全程只需确认 UAC 授权；需要 NVIDIA 显卡。注意 Docker Desktop 安装在系统盘，云电脑/频繁重置的环境中请评估重装成本。
 
-没有 GPU 或尚未安装模型时，文案、配音和剪辑环节仍可单独测试；MuseTalk/HeyGem 只有在各自运行环境准备好后才会真正生成视频。
+没有 GPU 或尚未安装模型时，文案、配音和剪辑环节仍可单独测试；MuseTalk只有在各自运行环境准备好后才会真正生成视频。
 
 ASR 可选本地 FunASR（Paraformer 或 SenseVoice）。主程序自身不安装 funasr/PyTorch：转写在 voice 模型包自带的运行时（`runtime-py312-cu128`）里以本机适配服务运行，主程序只通过回环 HTTP 调用。将完整模型放进标准目录（或用「一键接入模型包」导入 voice 包）后即可在设置中选择本地路由。详见 [`docs/local-ai.md`](docs/local-ai.md)。
 
@@ -106,7 +104,7 @@ pytest -q
 - 上传到云端的内容只由你在工作流中主动选择的模型步骤决定，例如 ASR、声音生成或 VideoRetalk。
 - API Key 默认保存在当前 Windows 用户的 `%LOCALAPPDATA%\afan Talking Video Agent` 数据目录中，不应提交到 Git 或分享给他人。
 - 参考视频、声音样音和生成文件默认保存在本机数据目录；请自行确认磁盘空间和备份策略。
-- 使用人物肖像、声音样音和参考内容前，必须确认你拥有相应授权，并遵守发布平台的 AI 内容标注规则。
+- 使用人物肖像、声音样音和参考内容前，必须确认你拥有相应授权，并遵守发布平台的 AI 内容相关规则。
 
 ## 打包 Windows 安装包
 
