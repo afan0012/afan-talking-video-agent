@@ -87,7 +87,10 @@ def main() -> None:
     for name in ("libcrypto-3-x64.dll", "libssl-3-x64.dll",
                  "libcrypto-3.dll", "libssl-3.dll",
                  "libcrypto-1_1-x64.dll", "libssl-1_1-x64.dll",
-                 "libbz2.dll", "ffi.dll", "liblzma.dll", "libexpat.dll"):
+                 "libbz2.dll", "ffi.dll", "liblzma.dll", "libexpat.dll",
+                 # Conda 布局把 Tcl/Tk 的 DLL 也放在 Library/bin，PyInstaller
+                 # 的依赖遍历找不到（只报 WARNING），缺了它们目录选择器打不开。
+                 "tk86t.dll", "tcl86t.dll"):
         candidate = library_bin / name
         if candidate.is_file():
             command.extend(["--add-binary", f"{candidate};."])
