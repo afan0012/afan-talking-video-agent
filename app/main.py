@@ -3855,6 +3855,19 @@ else:
     except OSError:
         pass  # 数据目录不可写时仅影响 CLI 调用，网页端不受影响
 
+# 源码运行时数据根是项目目录（或自定义目录），安装版残留在 %LOCALAPPDATA% 的
+# 旧 token 会抢在前面被技能包里的 CLI 读到（技能目录的 parents[1] 不是项目根）。
+# 源码运行一律把当前 token 镜像到安装版默认数据目录（CLI 候选列表的固定成员），
+# 保证任一启动方式下外部 CLI 都能对上握手 token；安装版自身无需镜像。
+if not getattr(sys, "frozen", False):
+    try:
+        _local_app_data = Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+        _mirror_file = _local_app_data / "afan Talking Video Agent" / "agent_token.txt"
+        _mirror_file.parent.mkdir(parents=True, exist_ok=True)
+        _mirror_file.write_text(_API_TOKEN, encoding="utf-8")
+    except OSError:
+        pass  # 镜像失败只影响安装版目录下的 CLI 发现，不影响服务本身
+
 
 # 这两个 GET 会在桌面弹原生文件夹选择框；前端经 api() 调用已带 token，
 # 一并纳入校验，防止恶意网页在后台反复弹窗骚扰。

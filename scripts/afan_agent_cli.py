@@ -71,16 +71,55 @@ def _read_hint_file(name: str) -> str:
     return ""
 
 
+def _hint_values(name: str) -> list[str]:
+    """按候选顺序返回各数据目录中提示文件的内容（可能来自安装版残留，需调用方甄别）。"""
+    values: list[str] = []
+    for root in _data_root_candidates():
+        hint = root / name
+        if hint.is_file():
+            try:
+                content = hint.read_text(encoding="utf-8").strip()
+            except OSError:
+                continue
+            if content and content not in values:
+                values.append(content)
+    return values
+
+
+def _url_alive(url: str) -> bool:
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(f"{url.rstrip('/')}/api/health", timeout=0.8) as response:
+            return getattr(response, "status", 200) == 200
+    except OSError:
+        return False
+
+
 def _discover_base_url() -> str:
-    """AFAN_AGENT_URL 优先；否则读取启动器记录的实际地址（随机端口场景）。"""
+    """AFAN_AGENT_URL 优先；候选（安装版/源码运行各自的 current_url.txt）不止一个时探活甄别。"""
+    candidates: list[str] = []
     env_url = os.environ.get("AFAN_AGENT_URL", "").strip()
     if env_url:
-        return env_url
-    return _read_hint_file("current_url.txt") or DEFAULT_BASE_URL
+        candidates.append(env_url)
+    candidates.extend(_hint_values("current_url.txt"))
+    candidates.append(DEFAULT_BASE_URL)
+    unique = list(dict.fromkeys(candidates))
+    if len(unique) == 1:
+        return unique[0]
+    for url in unique:
+        if _url_alive(url):
+            return url
+    return unique[0]
 
 
-def _discover_token() -> str:
-    return os.environ.get("AFAN_AGENT_TOKEN", "").strip() or _read_hint_file("agent_token.txt")
+def _token_candidates() -> list[str]:
+    tokens: list[str] = []
+    env_token = os.environ.get("AFAN_AGENT_TOKEN", "").strip()
+    if env_token:
+        tokens.append(env_token)
+    tokens.extend(_hint_values("agent_token.txt"))
+    return list(dict.fromkeys(tokens))
 
 
 class CliError(RuntimeError):
@@ -154,23 +193,37 @@ class ApiClient:
     def __init__(self, base_url: str, timeout: float = DEFAULT_TIMEOUT) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
-        self.token = _discover_token()
+        # 同机可能同时存在安装版与源码运行的 token 残留；写操作遇到 403 时
+        # 自动尝试下一个候选，保证无论哪个实例在运行都能对上握手 token。
+        self.tokens = _token_candidates()
+        self.token = self.tokens[0] if self.tokens else ""
 
-    def request(self, method: str, path: str, **kwargs: Any) -> Any:
-        headers = {**(kwargs.pop("headers", None) or {})}
-        if path.startswith("/api/") and self.token:
-            # 服务端要求所有 /api 写操作携带握手 token（app/main.py local_api_guard），
-            # token 由服务启动时写入数据目录的 agent_token.txt，本函数自动读取。
-            headers.setdefault("x-afan-token", self.token)
-        url = f"{self.base_url}{path}"
+    def _send(self, method: str, url: str, headers: dict[str, str], kwargs: dict[str, Any]) -> Any:
         if httpx is None:
             return _urllib_request(method, url, headers, kwargs, self.timeout)
         try:
-            response = httpx.request(method, url, timeout=self.timeout, headers=headers, **kwargs)
+            return httpx.request(method, url, timeout=self.timeout, headers=headers, **kwargs)
         except httpx.HTTPError as error:
             raise CliError(
                 f"无法连接口播智能体服务：{self.base_url}。请先启动服务，或使用 --base-url 指定地址。\n{error}"
             ) from error
+
+    def request(self, method: str, path: str, **kwargs: Any) -> Any:
+        headers = {**(kwargs.pop("headers", None) or {})}
+        # 服务端只对 /api/ 写操作校验握手 token（local_api_guard），GET 不需要。
+        needs_token = path.startswith("/api/") and method.upper() != "GET"
+        candidates = (self.tokens or [""]) if needs_token else [""]
+        response: Any = None
+        for index, token in enumerate(candidates):
+            attempt = dict(headers)
+            if needs_token and token:
+                # 服务端要求所有 /api 写操作携带握手 token（app/main.py local_api_guard），
+                # token 由服务启动时写入数据目录的 agent_token.txt。
+                attempt.setdefault("x-afan-token", token)
+            response = self._send(method, f"{self.base_url}{path}", attempt, kwargs)
+            # 403 且还有候选 token 时，多半是撞上了安装版/源码运行的残留 token，换下一个重试。
+            if not (needs_token and response.status_code == 403 and index + 1 < len(candidates)):
+                break
         if response.is_error:
             detail: Any = None
             try:

@@ -305,6 +305,39 @@ def test_wait_timeout_reports_error(monkeypatch, capsys):
     assert "超时" in error["error"]
 
 
+def test_request_retries_next_token_on_403(monkeypatch):
+    client = ApiClient("http://127.0.0.1:8000")
+    client.tokens = ["stale-token", "fresh-token"]
+    used_tokens = []
+    responses = iter([
+        cli._UrllibResponse(403, '{"detail":"握手失效"}'.encode("utf-8")),
+        cli._UrllibResponse(200, '{"id":"j1"}'.encode("utf-8")),
+    ])
+
+    def fake_send(self, method, url, headers, kwargs):
+        used_tokens.append(headers.get("x-afan-token"))
+        return next(responses)
+
+    monkeypatch.setattr(ApiClient, "_send", fake_send)
+    result = client.request("POST", "/api/projects/draft", data={"source_name": "x"})
+    assert result.status_code == 200
+    assert used_tokens == ["stale-token", "fresh-token"]
+
+
+def test_get_requests_do_not_send_token(monkeypatch):
+    client = ApiClient("http://127.0.0.1:8000")
+    client.tokens = ["some-token"]
+    seen = {}
+
+    def fake_send(self, method, url, headers, kwargs):
+        seen.update(headers)
+        return cli._UrllibResponse(200, '{"ok":true}'.encode("utf-8"))
+
+    monkeypatch.setattr(ApiClient, "_send", fake_send)
+    client.request("GET", "/api/health")
+    assert "x-afan-token" not in seen
+
+
 def test_key_value_parser_rejects_bad_input():
     with pytest.raises(SystemExit):
         _command_parser().parse_args(["edit", "j1", "--set", "没有等号"])
