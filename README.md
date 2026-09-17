@@ -53,7 +53,7 @@ pip install -r requirements.txt
 
 ### 给其他 AI 调用：CLI
 
-项目提供了一个不执行任意 shell 命令的 CLI 入口。CLI 只调用本机 FastAPI，所有成功结果都是 JSON；长任务立即返回 `id`，再用 `status` 查询，不需要让一个进程一直等待。
+项目提供了一个不执行任意 shell 命令的 CLI 入口。CLI 只调用本机 FastAPI，所有成功结果都是 JSON；长任务立即返回 `id`，再用 `status` 查询或 `wait` 等待。CLI 覆盖全部工作流（文案、人物、配音、改口型、剪辑、素材库、项目管理），并为 AI 客户端提供自描述命令：`guide`（工作流契约）、`schema`（命令目录）、`status` 返回的 `next_actions`（下一步建议）。
 
 在项目根目录执行：
 
@@ -66,9 +66,9 @@ python scripts/afan_agent_cli.py projects
 
 Windows 也可以直接运行 `afan-agent.bat`。服务不在默认地址时设置 `AFAN_AGENT_URL`，或给每次命令加 `--base-url http://127.0.0.1:8000`。
 
-常用命令包括 `create-job`（提交人物视频和要求）、`extract-reference`（从本地参考视频提取文案）、`create-script`、`upload-person-video`、`save-rewritten`、`generate-video`、`status` 和 `download`。视频、声音和参考素材仍然通过本地路径上传到本机服务，不会被 CLI 自动发送到第三方；是否调用云端模型由工作流中的模型选择决定。
+网页顶栏的「复制为 AI 指令」按钮可把当前项目进度和已选参数一键变成提示词，粘贴给安装了 `afan-talking-video` skill 的 AI 即可继续制作。完整接入说明见 [`docs/agent-api.md`](docs/agent-api.md)，skill 源文件在 [`skills/afan-talking-video/SKILL.md`](skills/afan-talking-video/SKILL.md)。
 
-CLI 是稳定的基础调用入口；以后可以在它之上增加一个薄 MCP 适配器，MCP 不参与核心任务执行。
+视频、声音和参考素材仍然通过本地路径上传到本机服务，不会被 CLI 自动发送到第三方；是否调用云端模型由工作流中的模型选择决定。CLI 是稳定的基础调用入口；以后可以在它之上增加一个薄 MCP 适配器，MCP 不参与核心任务执行。
 
 服务默认只监听本机地址；是否将媒体发送到云端，取决于你在工作流中选择的模型步骤。
 

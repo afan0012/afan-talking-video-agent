@@ -1172,6 +1172,7 @@ async function deleteLibraryAsset(assetId) {
   try { await api(`/api/library/${assetId}`, { method: 'DELETE' }); await refreshLibrary(); } catch (error) { notice.textContent = error.message; }
 }
 $('#library-btn')?.addEventListener('click', () => openLibrary());
+$('#ai-prompt-btn')?.addEventListener('click', copyAiPrompt);
 $('#library-close')?.addEventListener('click', closeLibrary);
 document.querySelectorAll('[data-open-library]').forEach((button) => button.addEventListener('click', () => openLibrary(button.dataset.openLibrary, button.dataset.libraryTarget)));
 document.querySelectorAll('[data-library-kind]').forEach((button) => button.addEventListener('click', async () => {
@@ -2089,6 +2090,61 @@ if (/[?&]settings=open/.test(location.search)) setTimeout(function () {
   }, 900);
 }, 400);
 
+
+// ── UI as prompt：把当前项目状态与已选参数变成给 AI 的提示词 ──
+function buildAiPrompt() {
+  if (!project) return '';
+  const id = project.id;
+  const done = [];
+  if ((project.transcript || '').trim()) done.push('原文案已就绪');
+  if ((project.rewritten_text || '').trim()) done.push('最终文案已确认');
+  if (Number(project.person_duration) > 0) done.push('人物视频已上传并检测通过');
+  if (project.preview_audio_name) done.push('配音试听已生成');
+  if (project.preview_confirmed) done.push('试听已确认');
+  if (project.output_name) done.push('改口型视频已生成');
+  if (project.edit_output_name) done.push('剪辑成片已导出');
+  const choices = [];
+  if (project.title) choices.push(`标题「${project.title}」`);
+  if (project.sticker) choices.push(`贴纸「${project.sticker}」`);
+  if (project.subtitle_keywords) choices.push(`字幕高亮关键词：${project.subtitle_keywords}`);
+  if (project.cover_text) choices.push(`封面文案「${project.cover_text}」`);
+  if (project.cover_style) choices.push(`封面样式 ${project.cover_style}`);
+  if (project.music_name) choices.push(`背景音乐已选 ${project.music_name}`);
+  if (project.layout_mode === 'pip') choices.push('画中画布局');
+  const lines = [
+    '请帮我继续制作 afan 口播视频项目，使用项目根目录的 afan-agent CLI。',
+    `项目 ID：${id}（项目名：${project.source_name || '未命名'}）`,
+    `已完成：${done.length ? done.join('、') : '尚无进度'}`,
+  ];
+  if (choices.length) lines.push(`我在界面上已选定的参数（若对应步骤尚未执行，请沿用这些选择）：${choices.join('；')}。`);
+  lines.push(`请先执行 python scripts/afan_agent_cli.py guide 了解流程，再用 status ${id} 查看进度——返回结果里的 next_actions 会给出下一步命令，按它自主推进；长任务提交后用 wait ${id} 等待。`);
+  lines.push('本项目的人物肖像和声音素材我已确认拥有授权，涉及授权的命令可以加 --consent / --authorized；成片完成后用 download 命令保存到本地。');
+  return lines.join('\n');
+}
+
+async function copyAiPrompt() {
+  const text = buildAiPrompt();
+  if (!text) {
+    notice.textContent = '请先创建或打开一个项目，再复制 AI 指令。';
+    return;
+  }
+  try {
+    if (navigator.clipboard && window.isSecureContext !== false) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const helper = document.createElement('textarea');
+      helper.value = text;
+      helper.setAttribute('style', 'position:fixed;opacity:0');
+      document.body.appendChild(helper);
+      helper.select();
+      document.execCommand('copy');
+      helper.remove();
+    }
+    notice.textContent = 'AI 指令已复制，粘贴给接入了 afan-agent CLI 的 AI 即可继续制作。';
+  } catch (error) {
+    notice.textContent = '复制失败：' + (error && error.message ? error.message : error);
+  }
+}
 
 // ── 本地服务心跳：托盘「退出」或「退出程序」后，遗留页面自动提示已失效 ──
 function showServiceDownOverlay() {

@@ -84,6 +84,7 @@ from app.local_runtime import (
 from app.musetalk_downloader import download_status as musetalk_download_status, start_download as start_musetalk_download
 from app.qwen_tts_local import LocalQwenTTS
 from app.storage import read_json, write_json_atomic
+from app.workflow_contract import WORKFLOW as _WORKFLOW_CONTRACT
 from app.service_connections import (
     SERVICE_CAPABILITIES,
     SUPPORTED_SERVICE_ADAPTERS,
@@ -4957,6 +4958,12 @@ def health() -> dict[str, Any]:
             or shutil.which("ffmpeg")
         ),
     }
+
+
+@app.get("/api/workflow")
+def workflow_contract() -> dict[str, Any]:
+    """只读暴露工作流契约；UI 提示、CLI guide 与外部 AI 提示词共用同一份真相源。"""
+    return {"ok": True, "workflow": _WORKFLOW_CONTRACT}
 
 
 @app.get("/api/digital-human/providers")

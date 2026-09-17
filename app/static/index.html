@@ -14,7 +14,7 @@
     <main>
       <header class="topbar">
         <div><p class="eyebrow">afan Talking Video Agent</p><strong id="project-name" title="点击修改项目名称">Untitled Project</strong></div>
-        <div class="topbar-right"><button id="save-btn" class="save-btn">保存</button><button id="new-project-btn" class="new-project-btn">＋ 新建</button><button id="manage-btn" class="manage-btn">项目记录</button><button id="library-btn" class="manage-btn">素材库</button><select id="project-switcher" class="project-switcher" aria-label="最近项目"><option value="">最近项目</option></select></div>
+        <div class="topbar-right"><button id="save-btn" class="save-btn">保存</button><button id="new-project-btn" class="new-project-btn">＋ 新建</button><button id="manage-btn" class="manage-btn">项目记录</button><button id="library-btn" class="manage-btn">素材库</button><button id="ai-prompt-btn" class="manage-btn" title="把当前项目进度和已选参数变成提示词，粘贴给接入了 afan-agent CLI 的 AI 继续制作">复制为 AI 指令</button><select id="project-switcher" class="project-switcher" aria-label="最近项目"><option value="">最近项目</option></select></div>
       </header>
 
       <div class="steps" aria-label="创作流程"><button type="button" data-panel-nav="1" class="current">① 文案创作</button><i>→</i><button type="button" data-panel-nav="2">② 人物与声音</button><i>→</i><button type="button" data-panel-nav="3">③ 视频生成</button><i>→</i><button type="button" data-panel-nav="4">④ 成片剪辑</button><i>→</i><button type="button" data-panel-nav="5">⑤ 包装与导出</button></div>
@@ -431,6 +431,6 @@
   <div id="confirm-dialog" class="dialog-overlay hidden"><div class="dialog-box"><p id="confirm-message">要保存当前项目吗？</p><div class="dialog-actions"><button id="confirm-save" class="dialog-btn primary" onclick="window._doSaveAndNew()">保存并新建</button><button id="confirm-discard" class="dialog-btn secondary" onclick="window._doDiscardAndNew()">不保存</button><button id="confirm-cancel" class="dialog-btn secondary" onclick="window._doCancelNew()">取消</button></div></div></div>
   <div id="broll-editor-dialog" class="dialog-overlay hidden"><div class="dialog-box broll-editor-box"><div class="split-heading"><h3 id="broll-editor-heading">编辑 B-roll</h3><button id="broll-editor-close" class="dialog-close" type="button">✕</button></div><div id="broll-editor-content" class="broll-editor-content"></div><div class="dialog-actions"><button id="broll-editor-save" class="dialog-btn primary" type="button">保存</button><button id="broll-editor-cancel" class="dialog-btn secondary" type="button">取消</button></div><p id="broll-editor-status" class="hint"></p></div></div>
   <script src="/static/template-catalog.js?v=1"></script>
-  <script src="/static/app.js?v=lite-25-broll-library"></script>
+  <script src="/static/app.js?v=lite-26-ai-prompt"></script>
 <script src="/static/upgrade.js?v=28"></script></body>
 </html>
