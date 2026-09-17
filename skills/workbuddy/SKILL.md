@@ -25,6 +25,8 @@ python scripts/afan_agent_cli.py health
 
 连不上时提示用户先启动 afan 工作台（桌面快捷方式或托盘图标）。
 
+若 `python` 命令不可用或行为异常（如 Windows 上误指向 Microsoft Store 占位程序），依次尝试 `py -3`、`python3`，再不行请用户提供本机 Python 的完整路径。
+
 ## 黄金循环（务必遵守）
 
 1. **`guide`** — 先执行一次，了解流水线步骤、前置条件与约束（返回 JSON 契约）。
