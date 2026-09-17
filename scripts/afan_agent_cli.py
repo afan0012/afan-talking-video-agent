@@ -20,10 +20,15 @@ import json
 import os
 import sys
 import time
+import urllib.parse
+import uuid
 from pathlib import Path
 from typing import Any, Iterable
 
-import httpx
+try:
+    import httpx
+except ImportError:  # 技能包等分发场景允许零依赖运行，自动退回标准库 urllib。
+    httpx = None
 
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8000"
@@ -82,20 +87,86 @@ class CliError(RuntimeError):
     """An expected, user-actionable CLI failure."""
 
 
+class _UrllibResponse:
+    """httpx.Response 的最小子集，供未安装 httpx 的环境使用。"""
+
+    def __init__(self, status_code: int, content: bytes) -> None:
+        self.status_code = status_code
+        self.content = content
+        self.text = content.decode("utf-8", errors="replace")
+
+    @property
+    def is_error(self) -> bool:
+        return self.status_code >= 400
+
+    def json(self) -> Any:
+        return json.loads(self.content.decode("utf-8"))
+
+
+def _multipart_body(data: dict[str, str] | None, files: dict[str, tuple[str, Any, str]] | None) -> tuple[bytes, str]:
+    boundary = f"----afanAgentCli{uuid.uuid4().hex}"
+    chunks: list[bytes] = []
+    for key, value in (data or {}).items():
+        chunks.append(
+            f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n'.encode("utf-8")
+            + str(value).encode("utf-8")
+            + b"\r\n"
+        )
+    for field, (filename, handle, content_type) in (files or {}).items():
+        chunks.append(
+            (
+                f'--{boundary}\r\nContent-Disposition: form-data; name="{field}"; filename="{filename}"\r\n'
+                f"Content-Type: {content_type}\r\n\r\n"
+            ).encode("utf-8")
+            + handle.read()
+            + b"\r\n"
+        )
+    chunks.append(f"--{boundary}--\r\n".encode("utf-8"))
+    return b"".join(chunks), boundary
+
+
+def _urllib_request(method: str, url: str, headers: dict[str, str], kwargs: dict[str, Any], timeout: float) -> _UrllibResponse:
+    import urllib.error
+    import urllib.request
+
+    body: bytes | None
+    if kwargs.get("files"):
+        body, boundary = _multipart_body(kwargs.get("data"), kwargs["files"])
+        headers = {**headers, "Content-Type": f"multipart/form-data; boundary={boundary}"}
+    elif kwargs.get("data") is not None:
+        body = urllib.parse.urlencode(kwargs["data"]).encode("utf-8")
+        headers = {**headers, "Content-Type": "application/x-www-form-urlencoded"}
+    else:
+        body = None
+    request = urllib.request.Request(url, data=body, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return _UrllibResponse(response.status, response.read())
+    except urllib.error.HTTPError as error:
+        return _UrllibResponse(error.code, error.read())
+    except (urllib.error.URLError, OSError) as error:
+        raise CliError(
+            f"无法连接口播智能体服务：{url.split('/api/')[0]}。请先启动服务，或使用 --base-url 指定地址。\n{error}"
+        ) from error
+
+
 class ApiClient:
     def __init__(self, base_url: str, timeout: float = DEFAULT_TIMEOUT) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.token = _discover_token()
 
-    def request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
+    def request(self, method: str, path: str, **kwargs: Any) -> Any:
         headers = {**(kwargs.pop("headers", None) or {})}
         if path.startswith("/api/") and self.token:
             # 服务端要求所有 /api 写操作携带握手 token（app/main.py local_api_guard），
             # token 由服务启动时写入数据目录的 agent_token.txt，本函数自动读取。
             headers.setdefault("x-afan-token", self.token)
+        url = f"{self.base_url}{path}"
+        if httpx is None:
+            return _urllib_request(method, url, headers, kwargs, self.timeout)
         try:
-            response = httpx.request(method, f"{self.base_url}{path}", timeout=self.timeout, headers=headers, **kwargs)
+            response = httpx.request(method, url, timeout=self.timeout, headers=headers, **kwargs)
         except httpx.HTTPError as error:
             raise CliError(
                 f"无法连接口播智能体服务：{self.base_url}。请先启动服务，或使用 --base-url 指定地址。\n{error}"

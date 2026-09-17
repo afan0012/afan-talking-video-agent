@@ -66,7 +66,7 @@ python scripts/afan_agent_cli.py projects
 
 Windows 也可以直接运行 `afan-agent.bat`。服务不在默认地址时设置 `AFAN_AGENT_URL`，或给每次命令加 `--base-url http://127.0.0.1:8000`。
 
-网页顶栏的「复制为 AI 指令」按钮可把当前项目进度和已选参数一键变成提示词，粘贴给安装了 `afan-talking-video` skill 的 AI 即可继续制作。完整接入说明见 [`docs/agent-api.md`](docs/agent-api.md)，skill 源文件在 [`skills/afan-talking-video/SKILL.md`](skills/afan-talking-video/SKILL.md)。
+网页顶栏的「复制为 AI 指令」按钮可把当前项目进度和已选参数一键变成提示词，粘贴给安装了 `afan-talking-video` skill 的 AI 即可继续制作。完整接入说明见 [`docs/agent-api.md`](docs/agent-api.md)，skill 源文件在 [`skills/afan-talking-video/SKILL.md`](skills/afan-talking-video/SKILL.md)；也可打包发布到 WorkBuddy 开放平台的技能市场（`python scripts/build_workbuddy_skill.py`）。
 
 视频、声音和参考素材仍然通过本地路径上传到本机服务，不会被 CLI 自动发送到第三方；是否调用云端模型由工作流中的模型选择决定。CLI 是稳定的基础调用入口；以后可以在它之上增加一个薄 MCP 适配器，MCP 不参与核心任务执行。
 

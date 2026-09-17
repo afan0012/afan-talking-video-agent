@@ -55,6 +55,16 @@ cp skills/afan-talking-video/SKILL.md ~/.agents/skills/afan-talking-video/SKILL.
 
 `~/.agents/skills/` 是安装副本，不要直接改动；后续若接 Claude Desktop 等纯对话客户端，可在 CLI 之上加薄 MCP 适配器（MCP 不参与核心任务执行）。
 
+## 发布到 WorkBuddy 开放平台（open.workbuddy.cn）
+
+WorkBuddy 的「技能」形态与本项目的架构天然匹配：技能跑在用户桌面端，通过 Bash 执行技能包内 `scripts/` 的脚本——只要用户本机装了 afan 工作台，桌面 AI 就能驱动它。
+
+- 技能源文件：`skills/workbuddy/SKILL.md`（frontmatter 按平台必填字段组织：`description_zh`/`description_en`/`category`/`version`/`author` 等）
+- 打包命令：`python scripts/build_workbuddy_skill.py`，产物为 `work/workbuddy-skill/afan-talking-video.zip`（含 SKILL.md、`references/agent-api.md`、零依赖版 `scripts/afan_agent_cli.py`）
+- 技能包内的 CLI 已支持**零第三方依赖**运行（无 httpx 时自动退回标准库 urllib），用户机器不需要 pip install
+
+上架步骤（需腾讯账号）：在 open.workbuddy.cn 入驻并完成资质审核 → 创建技能（类型选「技能」）→ 上传 zip → 按平台分类列表确认 `category` → 测试通过后提交审核。修改技能只需改仓库源文件后重新打包上传。
+
 ## 安全与数据边界
 
 - CLI 与服务只在本机 `127.0.0.1` 通信；写操作需要数据目录 `agent_token.txt` 里的握手 token（CLI 自动读取）。
