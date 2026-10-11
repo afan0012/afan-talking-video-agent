@@ -39,6 +39,9 @@ tools/
 *.part
 *.crdownload
 *.tmp
+# 文档教程截图需要进 Git（docs/img 内例外，必须放在通配规则之后）
+!docs/img/*.png
+!docs/img/*.jpg
 
 # ── 测试/临时产物 ──
 work/frames/
